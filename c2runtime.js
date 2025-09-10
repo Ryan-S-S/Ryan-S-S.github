@@ -10267,7 +10267,7 @@ window["cr_setSuspended"] = function(s)
 			this.is_else_block = (this.conditions[0].type == null && this.conditions[0].func == cr.system_object.prototype.cnds.Else);
 		}
 	};
-	window["_c2hh_"] = "";
+	window["_c2hh_"] = "1F3CA22741FFC93AFD82C51C58E7048232A2AEFD";
 	EventBlock.prototype.postInit = function (hasElse/*, prevBlock_*/)
 	{
 		var i, len;
@@ -15220,6 +15220,913 @@ cr.system_object.prototype.loadFromJSON = function (o)
 cr.shaders = {};
 ;
 ;
+cr.plugins_.Arr = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var pluginProto = cr.plugins_.Arr.prototype;
+	pluginProto.Type = function(plugin)
+	{
+		this.plugin = plugin;
+		this.runtime = plugin.runtime;
+	};
+	var typeProto = pluginProto.Type.prototype;
+	typeProto.onCreate = function()
+	{
+	};
+	pluginProto.Instance = function(type)
+	{
+		this.type = type;
+		this.runtime = type.runtime;
+	};
+	var instanceProto = pluginProto.Instance.prototype;
+	var arrCache = [];
+	function allocArray()
+	{
+		if (arrCache.length)
+			return arrCache.pop();
+		else
+			return [];
+	};
+	if (!Array.isArray)
+	{
+		Array.isArray = function (vArg) {
+			return Object.prototype.toString.call(vArg) === "[object Array]";
+		};
+	}
+	function freeArray(a)
+	{
+		var i, len;
+		for (i = 0, len = a.length; i < len; i++)
+		{
+			if (Array.isArray(a[i]))
+				freeArray(a[i]);
+		}
+		cr.clearArray(a);
+		arrCache.push(a);
+	};
+	instanceProto.onCreate = function()
+	{
+		this.cx = this.properties[0];
+		this.cy = this.properties[1];
+		this.cz = this.properties[2];
+		if (!this.recycled)
+			this.arr = allocArray();
+		var a = this.arr;
+		a.length = this.cx;
+		var x, y, z;
+		for (x = 0; x < this.cx; x++)
+		{
+			if (!a[x])
+				a[x] = allocArray();
+			a[x].length = this.cy;
+			for (y = 0; y < this.cy; y++)
+			{
+				if (!a[x][y])
+					a[x][y] = allocArray();
+				a[x][y].length = this.cz;
+				for (z = 0; z < this.cz; z++)
+					a[x][y][z] = 0;
+			}
+		}
+		this.forX = [];
+		this.forY = [];
+		this.forZ = [];
+		this.forDepth = -1;
+	};
+	instanceProto.onDestroy = function ()
+	{
+		var x;
+		for (x = 0; x < this.cx; x++)
+			freeArray(this.arr[x]);		// will recurse down and recycle other arrays
+		cr.clearArray(this.arr);
+	};
+	instanceProto.at = function (x, y, z)
+	{
+		x = Math.floor(x);
+		y = Math.floor(y);
+		z = Math.floor(z);
+		if (isNaN(x) || x < 0 || x > this.cx - 1)
+			return 0;
+		if (isNaN(y) || y < 0 || y > this.cy - 1)
+			return 0;
+		if (isNaN(z) || z < 0 || z > this.cz - 1)
+			return 0;
+		return this.arr[x][y][z];
+	};
+	instanceProto.set = function (x, y, z, val)
+	{
+		x = Math.floor(x);
+		y = Math.floor(y);
+		z = Math.floor(z);
+		if (isNaN(x) || x < 0 || x > this.cx - 1)
+			return;
+		if (isNaN(y) || y < 0 || y > this.cy - 1)
+			return;
+		if (isNaN(z) || z < 0 || z > this.cz - 1)
+			return;
+		this.arr[x][y][z] = val;
+	};
+	instanceProto.getAsJSON = function ()
+	{
+		return JSON.stringify({
+			"c2array": true,
+			"size": [this.cx, this.cy, this.cz],
+			"data": this.arr
+		});
+	};
+	instanceProto.saveToJSON = function ()
+	{
+		return {
+			"size": [this.cx, this.cy, this.cz],
+			"data": this.arr
+		};
+	};
+	instanceProto.loadFromJSON = function (o)
+	{
+		var sz = o["size"];
+		this.cx = sz[0];
+		this.cy = sz[1];
+		this.cz = sz[2];
+		this.arr = o["data"];
+	};
+	instanceProto.setSize = function (w, h, d)
+	{
+		if (w < 0) w = 0;
+		if (h < 0) h = 0;
+		if (d < 0) d = 0;
+		if (this.cx === w && this.cy === h && this.cz === d)
+			return;		// no change
+		this.cx = w;
+		this.cy = h;
+		this.cz = d;
+		var x, y, z;
+		var a = this.arr;
+		a.length = w;
+		for (x = 0; x < this.cx; x++)
+		{
+			if (cr.is_undefined(a[x]))
+				a[x] = allocArray();
+			a[x].length = h;
+			for (y = 0; y < this.cy; y++)
+			{
+				if (cr.is_undefined(a[x][y]))
+					a[x][y] = allocArray();
+				a[x][y].length = d;
+				for (z = 0; z < this.cz; z++)
+				{
+					if (cr.is_undefined(a[x][y][z]))
+						a[x][y][z] = 0;
+				}
+			}
+		}
+	};
+	instanceProto.getForX = function ()
+	{
+		if (this.forDepth >= 0 && this.forDepth < this.forX.length)
+			return this.forX[this.forDepth];
+		else
+			return 0;
+	};
+	instanceProto.getForY = function ()
+	{
+		if (this.forDepth >= 0 && this.forDepth < this.forY.length)
+			return this.forY[this.forDepth];
+		else
+			return 0;
+	};
+	instanceProto.getForZ = function ()
+	{
+		if (this.forDepth >= 0 && this.forDepth < this.forZ.length)
+			return this.forZ[this.forDepth];
+		else
+			return 0;
+	};
+	function Cnds() {};
+	Cnds.prototype.CompareX = function (x, cmp, val)
+	{
+		return cr.do_cmp(this.at(x, 0, 0), cmp, val);
+	};
+	Cnds.prototype.CompareXY = function (x, y, cmp, val)
+	{
+		return cr.do_cmp(this.at(x, y, 0), cmp, val);
+	};
+	Cnds.prototype.CompareXYZ = function (x, y, z, cmp, val)
+	{
+		return cr.do_cmp(this.at(x, y, z), cmp, val);
+	};
+	instanceProto.doForEachTrigger = function (current_event)
+	{
+		this.runtime.pushCopySol(current_event.solModifiers);
+		current_event.retrigger();
+		this.runtime.popSol(current_event.solModifiers);
+	};
+	Cnds.prototype.ArrForEach = function (dims)
+	{
+        var current_event = this.runtime.getCurrentEventStack().current_event;
+		this.forDepth++;
+		var forDepth = this.forDepth;
+		if (forDepth === this.forX.length)
+		{
+			this.forX.push(0);
+			this.forY.push(0);
+			this.forZ.push(0);
+		}
+		else
+		{
+			this.forX[forDepth] = 0;
+			this.forY[forDepth] = 0;
+			this.forZ[forDepth] = 0;
+		}
+		switch (dims) {
+		case 0:
+			for (this.forX[forDepth] = 0; this.forX[forDepth] < this.cx; this.forX[forDepth]++)
+			{
+				for (this.forY[forDepth] = 0; this.forY[forDepth] < this.cy; this.forY[forDepth]++)
+				{
+					for (this.forZ[forDepth] = 0; this.forZ[forDepth] < this.cz; this.forZ[forDepth]++)
+					{
+						this.doForEachTrigger(current_event);
+					}
+				}
+			}
+			break;
+		case 1:
+			for (this.forX[forDepth] = 0; this.forX[forDepth] < this.cx; this.forX[forDepth]++)
+			{
+				for (this.forY[forDepth] = 0; this.forY[forDepth] < this.cy; this.forY[forDepth]++)
+				{
+					this.doForEachTrigger(current_event);
+				}
+			}
+			break;
+		case 2:
+			for (this.forX[forDepth] = 0; this.forX[forDepth] < this.cx; this.forX[forDepth]++)
+			{
+				this.doForEachTrigger(current_event);
+			}
+			break;
+		}
+		this.forDepth--;
+		return false;
+	};
+	Cnds.prototype.CompareCurrent = function (cmp, val)
+	{
+		return cr.do_cmp(this.at(this.getForX(), this.getForY(), this.getForZ()), cmp, val);
+	};
+	Cnds.prototype.Contains = function(val)
+	{
+		var x, y, z;
+		for (x = 0; x < this.cx; x++)
+		{
+			for (y = 0; y < this.cy; y++)
+			{
+				for (z = 0; z < this.cz; z++)
+				{
+					if (this.arr[x][y][z] === val)
+						return true;
+				}
+			}
+		}
+		return false;
+	};
+	Cnds.prototype.IsEmpty = function ()
+	{
+		return this.cx === 0 || this.cy === 0 || this.cz === 0;
+	};
+	Cnds.prototype.CompareSize = function (axis, cmp, value)
+	{
+		var s = 0;
+		switch (axis) {
+		case 0:
+			s = this.cx;
+			break;
+		case 1:
+			s = this.cy;
+			break;
+		case 2:
+			s = this.cz;
+			break;
+		}
+		return cr.do_cmp(s, cmp, value);
+	};
+	pluginProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.Clear = function ()
+	{
+		var x, y, z;
+		for (x = 0; x < this.cx; x++)
+			for (y = 0; y < this.cy; y++)
+				for (z = 0; z < this.cz; z++)
+					this.arr[x][y][z] = 0;
+	};
+	Acts.prototype.SetSize = function (w, h, d)
+	{
+		this.setSize(w, h, d);
+	};
+	Acts.prototype.SetX = function (x, val)
+	{
+		this.set(x, 0, 0, val);
+	};
+	Acts.prototype.SetXY = function (x, y, val)
+	{
+		this.set(x, y, 0, val);
+	};
+	Acts.prototype.SetXYZ = function (x, y, z, val)
+	{
+		this.set(x, y, z, val);
+	};
+	Acts.prototype.Push = function (where, value, axis)
+	{
+		var x = 0, y = 0, z = 0;
+		var a = this.arr;
+		switch (axis) {
+		case 0:	// X axis
+			if (where === 0)	// back
+			{
+				x = a.length;
+				a.push(allocArray());
+			}
+			else				// front
+			{
+				x = 0;
+				a.unshift(allocArray());
+			}
+			a[x].length = this.cy;
+			for ( ; y < this.cy; y++)
+			{
+				a[x][y] = allocArray();
+				a[x][y].length = this.cz;
+				for (z = 0; z < this.cz; z++)
+					a[x][y][z] = value;
+			}
+			this.cx++;
+			break;
+		case 1: // Y axis
+			for ( ; x < this.cx; x++)
+			{
+				if (where === 0)	// back
+				{
+					y = a[x].length;
+					a[x].push(allocArray());
+				}
+				else				// front
+				{
+					y = 0;
+					a[x].unshift(allocArray());
+				}
+				a[x][y].length = this.cz;
+				for (z = 0; z < this.cz; z++)
+					a[x][y][z] = value;
+			}
+			this.cy++;
+			break;
+		case 2:	// Z axis
+			for ( ; x < this.cx; x++)
+			{
+				for (y = 0; y < this.cy; y++)
+				{
+					if (where === 0)	// back
+					{
+						a[x][y].push(value);
+					}
+					else				// front
+					{
+						a[x][y].unshift(value);
+					}
+				}
+			}
+			this.cz++;
+			break;
+		}
+	};
+	Acts.prototype.Pop = function (where, axis)
+	{
+		var x = 0, y = 0, z = 0;
+		var a = this.arr;
+		switch (axis) {
+		case 0:	// X axis
+			if (this.cx === 0)
+				break;
+			if (where === 0)	// back
+			{
+				freeArray(a.pop());
+			}
+			else				// front
+			{
+				freeArray(a.shift());
+			}
+			this.cx--;
+			break;
+		case 1: // Y axis
+			if (this.cy === 0)
+				break;
+			for ( ; x < this.cx; x++)
+			{
+				if (where === 0)	// back
+				{
+					freeArray(a[x].pop());
+				}
+				else				// front
+				{
+					freeArray(a[x].shift());
+				}
+			}
+			this.cy--;
+			break;
+		case 2:	// Z axis
+			if (this.cz === 0)
+				break;
+			for ( ; x < this.cx; x++)
+			{
+				for (y = 0; y < this.cy; y++)
+				{
+					if (where === 0)	// back
+					{
+						a[x][y].pop();
+					}
+					else				// front
+					{
+						a[x][y].shift();
+					}
+				}
+			}
+			this.cz--;
+			break;
+		}
+	};
+	Acts.prototype.Reverse = function (axis)
+	{
+		var x = 0, y = 0, z = 0;
+		var a = this.arr;
+		if (this.cx === 0 || this.cy === 0 || this.cz === 0)
+			return;		// no point reversing empty array
+		switch (axis) {
+		case 0:	// X axis
+			a.reverse();
+			break;
+		case 1: // Y axis
+			for ( ; x < this.cx; x++)
+				a[x].reverse();
+			break;
+		case 2:	// Z axis
+			for ( ; x < this.cx; x++)
+				for (y = 0; y < this.cy; y++)
+					a[x][y].reverse();
+			break;
+		}
+	};
+	function compareValues(va, vb)
+	{
+		if (cr.is_number(va) && cr.is_number(vb))
+			return va - vb;
+		else
+		{
+			var sa = "" + va;
+			var sb = "" + vb;
+			if (sa < sb)
+				return -1;
+			else if (sa > sb)
+				return 1;
+			else
+				return 0;
+		}
+	}
+	Acts.prototype.Sort = function (axis)
+	{
+		var x = 0, y = 0, z = 0;
+		var a = this.arr;
+		if (this.cx === 0 || this.cy === 0 || this.cz === 0)
+			return;		// no point sorting empty array
+		switch (axis) {
+		case 0:	// X axis
+			a.sort(function (a, b) {
+				return compareValues(a[0][0], b[0][0]);
+			});
+			break;
+		case 1: // Y axis
+			for ( ; x < this.cx; x++)
+			{
+				a[x].sort(function (a, b) {
+					return compareValues(a[0], b[0]);
+				});
+			}
+			break;
+		case 2:	// Z axis
+			for ( ; x < this.cx; x++)
+			{
+				for (y = 0; y < this.cy; y++)
+				{
+					a[x][y].sort(compareValues);
+				}
+			}
+			break;
+		}
+	};
+	Acts.prototype.Delete = function (index, axis)
+	{
+		var x = 0, y = 0, z = 0;
+		index = Math.floor(index);
+		var a = this.arr;
+		if (index < 0)
+			return;
+		switch (axis) {
+		case 0:	// X axis
+			if (index >= this.cx)
+				break;
+			freeArray(a[index]);
+			a.splice(index, 1);
+			this.cx--;
+			break;
+		case 1: // Y axis
+			if (index >= this.cy)
+				break;
+			for ( ; x < this.cx; x++)
+			{
+				freeArray(a[x][index]);
+				a[x].splice(index, 1);
+			}
+			this.cy--;
+			break;
+		case 2:	// Z axis
+			if (index >= this.cz)
+				break;
+			for ( ; x < this.cx; x++)
+			{
+				for (y = 0; y < this.cy; y++)
+				{
+					a[x][y].splice(index, 1);
+				}
+			}
+			this.cz--;
+			break;
+		}
+	};
+	Acts.prototype.Insert = function (value, index, axis)
+	{
+		var x = 0, y = 0, z = 0;
+		index = Math.floor(index);
+		var a = this.arr;
+		if (index < 0)
+			return;
+		switch (axis) {
+		case 0:	// X axis
+			if (index > this.cx)
+				return;
+			x = index;
+			a.splice(x, 0, allocArray());
+			a[x].length = this.cy;
+			for ( ; y < this.cy; y++)
+			{
+				a[x][y] = allocArray();
+				a[x][y].length = this.cz;
+				for (z = 0; z < this.cz; z++)
+					a[x][y][z] = value;
+			}
+			this.cx++;
+			break;
+		case 1: // Y axis
+			if (index > this.cy)
+				return;
+			for ( ; x < this.cx; x++)
+			{
+				y = index;
+				a[x].splice(y, 0, allocArray());
+				a[x][y].length = this.cz;
+				for (z = 0; z < this.cz; z++)
+					a[x][y][z] = value;
+			}
+			this.cy++;
+			break;
+		case 2:	// Z axis
+			if (index > this.cz)
+				return;
+			for ( ; x < this.cx; x++)
+			{
+				for (y = 0; y < this.cy; y++)
+				{
+					a[x][y].splice(index, 0, value);
+				}
+			}
+			this.cz++;
+			break;
+		}
+	};
+	Acts.prototype.JSONLoad = function (json_)
+	{
+		var o;
+		try {
+			o = JSON.parse(json_);
+		}
+		catch(e) { return; }
+		if (!o["c2array"])		// presumably not a c2array object
+			return;
+		var sz = o["size"];
+		this.cx = sz[0];
+		this.cy = sz[1];
+		this.cz = sz[2];
+		this.arr = o["data"];
+	};
+	Acts.prototype.JSONDownload = function (filename)
+	{
+		var a = document.createElement("a");
+		if (typeof a.download === "undefined")
+		{
+			var str = 'data:text/html,' + encodeURIComponent("<p><a download='" + filename + "' href=\"data:application/json,"
+				+ encodeURIComponent(this.getAsJSON())
+				+ "\">Download link</a></p>");
+			window.open(str);
+		}
+		else
+		{
+			var body = document.getElementsByTagName("body")[0];
+			a.textContent = filename;
+			a.href = "data:application/json," + encodeURIComponent(this.getAsJSON());
+			a.download = filename;
+			body.appendChild(a);
+			var clickEvent = document.createEvent("MouseEvent");
+			clickEvent.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+			a.dispatchEvent(clickEvent);
+			body.removeChild(a);
+		}
+	};
+	pluginProto.acts = new Acts();
+	function Exps() {};
+	Exps.prototype.At = function (ret, x, y_, z_)
+	{
+		var y = y_ || 0;
+		var z = z_ || 0;
+		ret.set_any(this.at(x, y, z));
+	};
+	Exps.prototype.Width = function (ret)
+	{
+		ret.set_int(this.cx);
+	};
+	Exps.prototype.Height = function (ret)
+	{
+		ret.set_int(this.cy);
+	};
+	Exps.prototype.Depth = function (ret)
+	{
+		ret.set_int(this.cz);
+	};
+	Exps.prototype.CurX = function (ret)
+	{
+		ret.set_int(this.getForX());
+	};
+	Exps.prototype.CurY = function (ret)
+	{
+		ret.set_int(this.getForY());
+	};
+	Exps.prototype.CurZ = function (ret)
+	{
+		ret.set_int(this.getForZ());
+	};
+	Exps.prototype.CurValue = function (ret)
+	{
+		ret.set_any(this.at(this.getForX(), this.getForY(), this.getForZ()));
+	};
+	Exps.prototype.Front = function (ret)
+	{
+		ret.set_any(this.at(0, 0, 0));
+	};
+	Exps.prototype.Back = function (ret)
+	{
+		ret.set_any(this.at(this.cx - 1, 0, 0));
+	};
+	Exps.prototype.IndexOf = function (ret, v)
+	{
+		for (var i = 0; i < this.cx; i++)
+		{
+			if (this.arr[i][0][0] === v)
+			{
+				ret.set_int(i);
+				return;
+			}
+		}
+		ret.set_int(-1);
+	};
+	Exps.prototype.LastIndexOf = function (ret, v)
+	{
+		for (var i = this.cx - 1; i >= 0; i--)
+		{
+			if (this.arr[i][0][0] === v)
+			{
+				ret.set_int(i);
+				return;
+			}
+		}
+		ret.set_int(-1);
+	};
+	Exps.prototype.AsJSON = function (ret)
+	{
+		ret.set_string(this.getAsJSON());
+	};
+	pluginProto.exps = new Exps();
+}());
+;
+;
+cr.plugins_.Function = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var pluginProto = cr.plugins_.Function.prototype;
+	pluginProto.Type = function(plugin)
+	{
+		this.plugin = plugin;
+		this.runtime = plugin.runtime;
+	};
+	var typeProto = pluginProto.Type.prototype;
+	typeProto.onCreate = function()
+	{
+	};
+	pluginProto.Instance = function(type)
+	{
+		this.type = type;
+		this.runtime = type.runtime;
+	};
+	var instanceProto = pluginProto.Instance.prototype;
+	var funcStack = [];
+	var funcStackPtr = -1;
+	var isInPreview = false;	// set in onCreate
+	function FuncStackEntry()
+	{
+		this.name = "";
+		this.retVal = 0;
+		this.params = [];
+	};
+	function pushFuncStack()
+	{
+		funcStackPtr++;
+		if (funcStackPtr === funcStack.length)
+			funcStack.push(new FuncStackEntry());
+		return funcStack[funcStackPtr];
+	};
+	function getCurrentFuncStack()
+	{
+		if (funcStackPtr < 0)
+			return null;
+		return funcStack[funcStackPtr];
+	};
+	function getOneAboveFuncStack()
+	{
+		if (!funcStack.length)
+			return null;
+		var i = funcStackPtr + 1;
+		if (i >= funcStack.length)
+			i = funcStack.length - 1;
+		return funcStack[i];
+	};
+	function popFuncStack()
+	{
+;
+		funcStackPtr--;
+	};
+	instanceProto.onCreate = function()
+	{
+		isInPreview = (typeof cr_is_preview !== "undefined");
+		var self = this;
+		window["c2_callFunction"] = function (name_, params_)
+		{
+			var i, len, v;
+			var fs = pushFuncStack();
+			fs.name = name_.toLowerCase();
+			fs.retVal = 0;
+			if (params_)
+			{
+				fs.params.length = params_.length;
+				for (i = 0, len = params_.length; i < len; ++i)
+				{
+					v = params_[i];
+					if (typeof v === "number" || typeof v === "string")
+						fs.params[i] = v;
+					else if (typeof v === "boolean")
+						fs.params[i] = (v ? 1 : 0);
+					else
+						fs.params[i] = 0;
+				}
+			}
+			else
+			{
+				cr.clearArray(fs.params);
+			}
+			self.runtime.trigger(cr.plugins_.Function.prototype.cnds.OnFunction, self, fs.name);
+			popFuncStack();
+			return fs.retVal;
+		};
+	};
+	function Cnds() {};
+	Cnds.prototype.OnFunction = function (name_)
+	{
+		var fs = getCurrentFuncStack();
+		if (!fs)
+			return false;
+		return cr.equals_nocase(name_, fs.name);
+	};
+	Cnds.prototype.CompareParam = function (index_, cmp_, value_)
+	{
+		var fs = getCurrentFuncStack();
+		if (!fs)
+			return false;
+		index_ = cr.floor(index_);
+		if (index_ < 0 || index_ >= fs.params.length)
+			return false;
+		return cr.do_cmp(fs.params[index_], cmp_, value_);
+	};
+	pluginProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.CallFunction = function (name_, params_)
+	{
+		var fs = pushFuncStack();
+		fs.name = name_.toLowerCase();
+		fs.retVal = 0;
+		cr.shallowAssignArray(fs.params, params_);
+		var ran = this.runtime.trigger(cr.plugins_.Function.prototype.cnds.OnFunction, this, fs.name);
+		if (isInPreview && !ran)
+		{
+;
+		}
+		popFuncStack();
+	};
+	Acts.prototype.SetReturnValue = function (value_)
+	{
+		var fs = getCurrentFuncStack();
+		if (fs)
+			fs.retVal = value_;
+		else
+;
+	};
+	Acts.prototype.CallExpression = function (unused)
+	{
+	};
+	pluginProto.acts = new Acts();
+	function Exps() {};
+	Exps.prototype.ReturnValue = function (ret)
+	{
+		var fs = getOneAboveFuncStack();
+		if (fs)
+			ret.set_any(fs.retVal);
+		else
+			ret.set_int(0);
+	};
+	Exps.prototype.ParamCount = function (ret)
+	{
+		var fs = getCurrentFuncStack();
+		if (fs)
+			ret.set_int(fs.params.length);
+		else
+		{
+;
+			ret.set_int(0);
+		}
+	};
+	Exps.prototype.Param = function (ret, index_)
+	{
+		index_ = cr.floor(index_);
+		var fs = getCurrentFuncStack();
+		if (fs)
+		{
+			if (index_ >= 0 && index_ < fs.params.length)
+			{
+				ret.set_any(fs.params[index_]);
+			}
+			else
+			{
+;
+				ret.set_int(0);
+			}
+		}
+		else
+		{
+;
+			ret.set_int(0);
+		}
+	};
+	Exps.prototype.Call = function (ret, name_)
+	{
+		var fs = pushFuncStack();
+		fs.name = name_.toLowerCase();
+		fs.retVal = 0;
+		cr.clearArray(fs.params);
+		var i, len;
+		for (i = 2, len = arguments.length; i < len; i++)
+			fs.params.push(arguments[i]);
+		var ran = this.runtime.trigger(cr.plugins_.Function.prototype.cnds.OnFunction, this, fs.name);
+		if (isInPreview && !ran)
+		{
+;
+		}
+		popFuncStack();
+		ret.set_any(fs.retVal);
+	};
+	pluginProto.exps = new Exps();
+}());
+;
+;
 cr.plugins_.Keyboard = function(runtime)
 {
 	this.runtime = runtime;
@@ -16982,25 +17889,13 @@ cr.plugins_.Sprite = function(runtime)
 }());
 ;
 ;
-cr.plugins_.Text = function(runtime)
+cr.plugins_.Tilemap = function(runtime)
 {
 	this.runtime = runtime;
 };
 (function ()
 {
-	var pluginProto = cr.plugins_.Text.prototype;
-	pluginProto.onCreate = function ()
-	{
-		pluginProto.acts.SetWidth = function (w)
-		{
-			if (this.width !== w)
-			{
-				this.width = w;
-				this.text_changed = true;	// also recalculate text wrapping
-				this.set_bbox_changed();
-			}
-		};
-	};
+	var pluginProto = cr.plugins_.Tilemap.prototype;
 	pluginProto.Type = function(plugin)
 	{
 		this.plugin = plugin;
@@ -17009,608 +17904,1381 @@ cr.plugins_.Text = function(runtime)
 	var typeProto = pluginProto.Type.prototype;
 	typeProto.onCreate = function()
 	{
+		var i, len, p;
+		if (this.is_family)
+			return;
+		this.texture_img = new Image();
+		this.texture_img.cr_filesize = this.texture_filesize;
+		this.runtime.waitForImageLoad(this.texture_img, this.texture_file);
+		this.cut_tiles = [];
+		this.cut_tiles_valid = false;
+		this.tile_polys = [];
+		this.tile_polys_cached = false;		// first instance will cache polys with the tile width/height
+		if (this.tile_poly_data && this.tile_poly_data.length)
+		{
+			for (i = 0, len = this.tile_poly_data.length; i < len; ++i)
+			{
+				p = this.tile_poly_data[i];
+				if (p)
+				{
+					this.tile_polys.push({
+						poly: p,
+						flipmap: [[[null, null], [null, null]], [[null, null], [null, null]]]
+					});
+				}
+				else
+					this.tile_polys.push(null);
+			}
+		}
+	};
+	typeProto.cacheTilePoly = function (tileid, tilewidth, tileheight, fliph, flipv, flipd)
+	{
+		if (tileid < 0 || tileid >= this.tile_polys.length)
+			return;
+		if (!this.tile_polys[tileid])
+			return;		// no poly for this tile
+		var poly = this.tile_polys[tileid].poly;
+		var flipmap = this.tile_polys[tileid].flipmap;
+		var cached_poly = new cr.CollisionPoly(poly);
+		cached_poly.cache_poly(tilewidth, tileheight, 0);
+		if (flipd)
+			cached_poly.diag();
+		if (fliph)
+			cached_poly.mirror(tilewidth / 2);
+		if (flipv)
+			cached_poly.flip(tileheight / 2);
+		flipmap[fliph?1:0][flipv?1:0][flipd?1:0] = cached_poly;
+	};
+	typeProto.getTilePoly = function (id)
+	{
+		if (id === -1)
+			return null;
+		var tileid = (id & TILE_ID_MASK);
+		if (tileid < 0 || tileid >= this.tile_polys.length)
+			return null;		// out of range
+		if (!this.tile_polys[tileid])
+			return null;		// no poly for this tile
+		var fliph = (id & TILE_FLIPPED_HORIZONTAL) ? 1 : 0;
+		var flipv = (id & TILE_FLIPPED_VERTICAL) ? 1 : 0;
+		var flipd = (id & TILE_FLIPPED_DIAGONAL) ? 1 : 0;
+		return this.tile_polys[tileid].flipmap[fliph][flipv][flipd];
+	};
+	typeProto.freeCutTiles = function ()
+	{
+		var i, len;
+		var glwrap = this.runtime.glwrap;
+		if (glwrap)
+		{
+			for (i = 0, len = this.cut_tiles.length; i < len; ++i)
+				glwrap.deleteTexture(this.cut_tiles[i]);
+		}
+		cr.clearArray(this.cut_tiles);
+		this.cut_tiles_valid = false;
+	}
+	typeProto.maybeCutTiles = function (tw, th, offx, offy, sepx, sepy, seamless)
+	{
+		if (this.cut_tiles_valid)
+			return;		// no changed
+		if (tw <= 0 || th <= 0)
+			return;
+		this.freeCutTiles();
+		var img_width = this.texture_img.width;
+		var img_height = this.texture_img.height;
+		var x, y;
+		for (y = offy; y + th <= img_height; y += (th + sepy))
+		{
+			for (x = offx; x + tw <= img_width; x += (tw + sepx))
+			{
+				this.cut_tiles.push(this.CutTileImage(x, y, tw, th, seamless));
+			}
+		}
+		this.cut_tiles_valid = true;
+	};
+	typeProto.CutTileImage = function(x, y, w, h, seamless)
+	{
+		if (this.runtime.glwrap)
+		{
+			return this.DoCutTileImage(x, y, w, h, false, false, false, seamless);
+		}
+		else
+		{
+			var flipmap = [[[null, null], [null, null]], [[null, null], [null, null]]];
+			flipmap[0][0][0] = this.DoCutTileImage(x, y, w, h, false, false, false, seamless);
+			return {
+				flipmap: flipmap,
+				x: x,
+				y: y,
+				w: w,
+				h: h
+			};
+		}
+	};
+	typeProto.GetFlippedTileImage = function (tileid, fliph, flipv, flipd, seamless)
+	{
+		if (tileid < 0 || tileid >= this.cut_tiles.length)
+			return null;
+		var tile = this.cut_tiles[tileid];
+		var flipmap = tile.flipmap;
+		var hi = (fliph ? 1 : 0);
+		var vi = (flipv ? 1 : 0);
+		var di = (flipd ? 1 : 0);
+		var ret = flipmap[hi][vi][di];
+		if (ret)
+		{
+			return ret;
+		}
+		else
+		{
+			ret = this.DoCutTileImage(tile.x, tile.y, tile.w, tile.h, hi!==0, vi!==0, di!==0, seamless);
+			flipmap[hi][vi][di] = ret;
+			return ret;
+		}
+	};
+	typeProto.DoCutTileImage = function(x, y, w, h, fliph, flipv, flipd, seamless)
+	{
+		var dw = w;
+		var dh = h;
+		if (this.runtime.glwrap && !seamless)
+		{
+			if (!cr.isPOT(dw))
+				dw = cr.nextHighestPowerOfTwo(dw);
+			if (!cr.isPOT(dh))
+				dh = cr.nextHighestPowerOfTwo(dh);
+		}
+		var tmpcanvas = document.createElement("canvas");
+		tmpcanvas.width = dw;
+		tmpcanvas.height = dh;
+		var tmpctx = tmpcanvas.getContext("2d");
+		if (this.runtime.ctx)
+		{
+			if (fliph)
+			{
+				if (flipv)
+				{
+					if (flipd)
+					{
+						tmpctx.rotate(Math.PI / 2);
+						tmpctx.scale(-1, 1);
+						tmpctx.translate(-dw, -dh);
+					}
+					else
+					{
+						tmpctx.scale(-1, -1);
+						tmpctx.translate(-dw, -dh);
+					}
+				}
+				else
+				{
+					if (flipd)
+					{
+						tmpctx.rotate(Math.PI / 2);
+						tmpctx.translate(0, -dh);
+					}
+					else
+					{
+						tmpctx.scale(-1, 1);
+						tmpctx.translate(-dw, 0);
+					}
+				}
+			}
+			else
+			{
+				if (flipv)
+				{
+					if (flipd)
+					{
+						tmpctx.rotate(-Math.PI / 2);
+						tmpctx.translate(-dw, 0);
+					}
+					else
+					{
+						tmpctx.scale(1, -1);
+						tmpctx.translate(0, -dh);
+					}
+				}
+				else
+				{
+					if (flipd)
+					{
+						tmpctx.scale(-1, 1);
+						tmpctx.rotate(Math.PI / 2);
+					}
+				}
+			}
+			tmpctx.drawImage(this.texture_img, x, y, w, h, 0, 0, dw, dh);
+			if (seamless)
+				return tmpcanvas;
+			else
+				return this.runtime.ctx.createPattern(tmpcanvas, "repeat");
+		}
+		else
+		{
+;
+			tmpctx.drawImage(this.texture_img, x, y, w, h, 0, 0, dw, dh);
+			var tex = this.runtime.glwrap.createEmptyTexture(dw, dh, this.runtime.linearSampling, false, !seamless);
+			this.runtime.glwrap.videoToTexture(tmpcanvas, tex);
+			return tex;
+		}
 	};
 	typeProto.onLostWebGLContext = function ()
 	{
 		if (this.is_family)
 			return;
-		var i, len, inst;
-		for (i = 0, len = this.instances.length; i < len; i++)
-		{
-			inst = this.instances[i];
-			inst.mycanvas = null;
-			inst.myctx = null;
-			inst.mytex = null;
-		}
+		this.freeCutTiles();
+	};
+	typeProto.onRestoreWebGLContext = function ()
+	{
+	};
+	typeProto.loadTextures = function ()
+	{
+	};
+	typeProto.unloadTextures = function ()
+	{
+		if (this.is_family || this.instances.length)
+			return;
+		this.freeCutTiles();
+	};
+	typeProto.preloadCanvas2D = function (ctx)
+	{
 	};
 	pluginProto.Instance = function(type)
 	{
 		this.type = type;
 		this.runtime = type.runtime;
-		if (this.recycled)
-			cr.clearArray(this.lines);
-		else
-			this.lines = [];		// for word wrapping
-		this.text_changed = true;
 	};
 	var instanceProto = pluginProto.Instance.prototype;
-	var requestedWebFonts = {};		// already requested web fonts have an entry here
+	var TILE_FLIPPED_HORIZONTAL = -0x80000000		// note: pretend is a signed int, so negate
+	var TILE_FLIPPED_VERTICAL = 0x40000000
+	var TILE_FLIPPED_DIAGONAL = 0x20000000
+	var TILE_FLAGS_MASK = 0xE0000000
+	var TILE_ID_MASK = 0x1FFFFFFF
+	function TileQuad()
+	{
+		this.id = -1;
+		this.tileid = -1;
+		this.horiz_flip = false;
+		this.vert_flip = false;
+		this.diag_flip = false;
+		this.any_flip = false;
+		this.rc = new cr.rect(0, 0, 0, 0);
+	};
+	var tilequad_cache = [];
+	function allocTileQuad()
+	{
+		if (tilequad_cache.length)
+			return tilequad_cache.pop();
+		else
+			return new TileQuad();
+	};
+	function freeTileQuad(tq)
+	{
+		if (tilequad_cache.length < 10000)
+			tilequad_cache.push(tq);
+	};
+	function TileCollisionRect()
+	{
+		this.id = -1;
+		this.rc = new cr.rect(0, 0, 0, 0);
+		this.poly = null;
+	}
+	var collrect_cache = [];
+	function allocCollRect()
+	{
+		if (collrect_cache.length)
+			return collrect_cache.pop();
+		else
+			return new TileCollisionRect();
+	};
+	function freeCollRect(r)
+	{
+		if (collrect_cache.length < 10000)
+			collrect_cache.push(r);
+	};
+	var tile_cell_cache = [];
+	function allocTileCell(inst_, x_, y_)
+	{
+		var ret;
+		if (tile_cell_cache.length)
+		{
+			ret = tile_cell_cache.pop();
+			ret.inst = inst_;
+			ret.x = x_;
+			ret.y = y_;
+			ret.left = ret.x * ret.inst.cellwidth * ret.inst.tilewidth;
+			ret.top = ret.y * ret.inst.cellheight * ret.inst.tileheight;
+			ret.clear();
+			ret.quadmap_valid = false;
+			return ret;
+		}
+		else
+			return new TileCell(inst_, x_, y_);
+	};
+	function freeTileCell(tc)
+	{
+		var i, len;
+		for (i = 0, len = tc.quads.length; i < len; ++i)
+			freeTileQuad(tc.quads[i]);
+		cr.clearArray(tc.quads);
+		for (i = 0, len = tc.collision_rects.length; i < len; ++i)
+			freeCollRect(tc.collision_rects[i]);
+		cr.clearArray(tc.collision_rects);
+		if (tile_cell_cache.length < 1000)
+			tile_cell_cache.push(tc);
+	};
+	function TileCell(inst_, x_, y_)
+	{
+		this.inst = inst_;
+		this.x = x_;
+		this.y = y_;
+		this.left = this.x * this.inst.cellwidth * this.inst.tilewidth;
+		this.top = this.y * this.inst.cellheight * this.inst.tileheight;
+		this.tiles = [];
+		this.quads = [];
+		this.collision_rects = [];
+		this.quadmap_valid = false;
+		var i, len, j, lenj, arr;
+		for (i = 0, len = this.inst.cellheight; i < len; ++i)
+		{
+			arr = [];
+			for (j = 0, lenj = this.inst.cellwidth; j < lenj; ++j)
+				arr.push(-1);
+			this.tiles.push(arr);
+		}
+	};
+	TileCell.prototype.clear = function ()
+	{
+		var i, len, j, lenj, arr;
+		this.tiles.length = this.inst.cellheight;
+		for (i = 0, len = this.tiles.length; i < len; ++i)
+		{
+			arr = this.tiles[i];
+			if (!arr)
+			{
+				arr = [];
+				this.tiles[i] = arr;
+			}
+			arr.length = this.inst.cellwidth;
+			for (j = 0, lenj = arr.length; j < lenj; ++j)
+				arr[j] = -1;
+		}
+	};
+	TileCell.prototype.maybeBuildQuadMap = function ()
+	{
+		if (this.quadmap_valid)
+			return;		// not changed
+		var tilewidth = this.inst.tilewidth;
+		var tileheight = this.inst.tileheight;
+		if (tilewidth <= 0 || tileheight <= 0)
+			return;
+		var i, j, len, y, leny, x, lenx, arr, t, p, q;
+		for (i = 0, len = this.quads.length; i < len; ++i)
+			freeTileQuad(this.quads[i]);
+		for (i = 0, len = this.collision_rects.length; i < len; ++i)
+			freeCollRect(this.collision_rects[i]);
+		cr.clearArray(this.quads);
+		cr.clearArray(this.collision_rects);
+		var extentwidth = Math.min(this.inst.mapwidth, Math.floor(this.inst.width / tilewidth));
+		var extentheight = Math.min(this.inst.mapheight, Math.floor(this.inst.height / tileheight));
+		extentwidth -= this.left / tilewidth;
+		extentheight -= this.top / tileheight;
+		if (extentwidth > this.inst.cellwidth)
+			extentwidth = this.inst.cellwidth;
+		if (extentheight > this.inst.cellheight)
+			extentheight = this.inst.cellheight;
+		var seamless = this.inst.seamless;
+		var cur_quad = null;
+		for (y = 0, leny = extentheight; y < leny; ++y)
+		{
+			arr = this.tiles[y];
+			for (x = 0, lenx = extentwidth; x < lenx; ++x)
+			{
+				t = arr[x];
+				if (t === -1)
+				{
+					if (cur_quad)
+					{
+						this.quads.push(cur_quad);
+						cur_quad = null;
+					}
+					continue;
+				}
+				if (seamless || !cur_quad || t !== cur_quad.id)
+				{
+					if (cur_quad)
+						this.quads.push(cur_quad);
+					cur_quad = allocTileQuad();
+					cur_quad.id = t;
+					cur_quad.tileid = (t & TILE_ID_MASK);
+					cur_quad.horiz_flip = (t & TILE_FLIPPED_HORIZONTAL) !== 0;
+					cur_quad.vert_flip = (t & TILE_FLIPPED_VERTICAL) !== 0;
+					cur_quad.diag_flip = (t & TILE_FLIPPED_DIAGONAL) !== 0;
+					cur_quad.any_flip = (cur_quad.horiz_flip || cur_quad.vert_flip || cur_quad.diag_flip);
+					cur_quad.rc.left = x * tilewidth + this.left;
+					cur_quad.rc.top = y * tileheight + this.top;
+					cur_quad.rc.right = cur_quad.rc.left + tilewidth;
+					cur_quad.rc.bottom = cur_quad.rc.top + tileheight;
+				}
+				else
+				{
+					cur_quad.rc.right += tilewidth;
+				}
+			}
+			if (cur_quad)
+			{
+				this.quads.push(cur_quad);
+				cur_quad = null;
+			}
+		}
+		var cur_rect = null;
+		var tileid, tilepoly;
+		var cur_has_poly = false;
+		var rc;
+		for (y = 0, leny = extentheight; y < leny; ++y)
+		{
+			arr = this.tiles[y];
+			for (x = 0, lenx = extentwidth; x < lenx; ++x)
+			{
+				t = arr[x];
+				if (t === -1)
+				{
+					if (cur_rect)
+					{
+						this.collision_rects.push(cur_rect);
+						cur_rect = null;
+						cur_has_poly = false;
+					}
+					continue;
+				}
+				tileid = (t & TILE_ID_MASK);
+				tilepoly = this.inst.type.getTilePoly(t);
+				if (!cur_rect || tilepoly || cur_has_poly)
+				{
+					if (cur_rect)
+					{
+						this.collision_rects.push(cur_rect);
+						cur_rect = null;
+					}
+;
+					cur_rect = allocCollRect();
+					cur_rect.id = t;
+					cur_rect.poly = tilepoly ? tilepoly : null;
+					rc = cur_rect.rc;
+					rc.left = x * tilewidth + this.left;
+					rc.top = y * tileheight + this.top;
+					rc.right = rc.left + tilewidth;
+					rc.bottom = rc.top + tileheight;
+					cur_has_poly = !!tilepoly;
+				}
+				else
+				{
+					cur_rect.rc.right += tilewidth;
+				}
+			}
+			if (cur_rect)
+			{
+				this.collision_rects.push(cur_rect);
+				cur_rect = null;
+				cur_has_poly = false;
+			}
+		}
+		if (!seamless)
+		{
+			len = this.quads.length;
+			for (i = 0; i < len; ++i)
+			{
+				q = this.quads[i];
+				for (j = i + 1; j < len; ++j)
+				{
+					p = this.quads[j];
+					if (p.rc.top < q.rc.bottom)
+						continue;
+					if (p.rc.top > q.rc.bottom)
+						break;
+					if (p.rc.right > q.rc.right || p.rc.left > q.rc.left)
+						break;
+					if (p.id === q.id && p.rc.left === q.rc.left && p.rc.right === q.rc.right)
+					{
+						freeTileQuad(this.quads[j]);
+						this.quads.splice(j, 1);
+						--len;
+						q.rc.bottom += tileheight;
+						--j;		// look at same j index again
+					}
+				}
+			}
+		}
+		len = this.collision_rects.length;
+		var prc, qrc;
+		for (i = 0; i < len; ++i)
+		{
+			q = this.collision_rects[i];
+			if (q.poly)
+				continue;
+			qrc = q.rc;
+			for (j = i + 1; j < len; ++j)
+			{
+				p = this.collision_rects[j];
+				prc = p.rc;
+				if (prc.top < qrc.bottom)
+					continue;
+				if (prc.top > qrc.bottom)
+					break;
+				if (prc.right > qrc.right || prc.left > qrc.left)
+					break;
+				if (p.poly)
+					continue;
+				if (prc.left === qrc.left && prc.right === qrc.right)
+				{
+					freeCollRect(this.collision_rects[j]);
+					this.collision_rects.splice(j, 1);
+					--len;
+					qrc.bottom += tileheight;
+					--j;		// look at same j index again
+				}
+			}
+		}
+		this.quadmap_valid = true;
+	};
+	TileCell.prototype.setTileAt = function (x_, y_, t_)
+	{
+		if (this.tiles[y_][x_] !== t_)
+		{
+			this.tiles[y_][x_] = t_;
+			this.quadmap_valid = false;
+			this.inst.any_quadmap_changed = true;
+			this.inst.physics_changed = true;
+			this.inst.runtime.redraw = true;
+		}
+	};
 	instanceProto.onCreate = function()
 	{
-		this.text = this.properties[0];
-		this.visible = (this.properties[1] === 0);		// 0=visible, 1=invisible
-		this.font = this.properties[2];
-		this.color = this.properties[3];
-		this.halign = this.properties[4];				// 0=left, 1=center, 2=right
-		this.valign = this.properties[5];				// 0=top, 1=center, 2=bottom
-		this.wrapbyword = (this.properties[7] === 0);	// 0=word, 1=character
-		this.lastwidth = this.width;
-		this.lastwrapwidth = this.width;
-		this.lastheight = this.height;
-		this.line_height_offset = this.properties[8];
-		this.facename = "";
-		this.fontstyle = "";
-		this.ptSize = 0;
-		this.textWidth = 0;
-		this.textHeight = 0;
-		this.parseFont();
-		this.mycanvas = null;
-		this.myctx = null;
-		this.mytex = null;
-		this.need_text_redraw = false;
-		this.last_render_tick = this.runtime.tickcount;
-		if (this.recycled)
-			this.rcTex.set(0, 0, 1, 1);
-		else
-			this.rcTex = new cr.rect(0, 0, 1, 1);
-		if (this.runtime.glwrap)
-			this.runtime.tickMe(this);
 ;
-	};
-	instanceProto.parseFont = function ()
-	{
-		var arr = this.font.split(" ");
-		var i;
-		for (i = 0; i < arr.length; i++)
+		var i, len, p;
+		this.visible = (this.properties[0] === 0);
+		this.tilewidth = this.properties[1];
+		this.tileheight = this.properties[2];
+		this.tilexoffset = this.properties[3];
+		this.tileyoffset = this.properties[4];
+		this.tilexspacing = this.properties[5];
+		this.tileyspacing = this.properties[6];
+		this.seamless = (this.properties[7] !== 0);
+		this.mapwidth = this.tilemap_width;
+		this.mapheight = this.tilemap_height;
+		this.lastwidth = this.width;
+		this.lastheight = this.height;
+		var tw = this.tilewidth;
+		var th = this.tileheight;
+		if (tw === 0)
+			tw = 1;
+		if (th === 0)
+			th = 1;
+		this.cellwidth = Math.ceil(this.runtime.original_width / tw);
+		this.cellheight = Math.ceil(this.runtime.original_height / th);
+		if (!this.type.tile_polys_cached)
 		{
-			if (arr[i].substr(arr[i].length - 2, 2) === "pt")
+			this.type.tile_polys_cached = true;
+			for (i = 0, len = this.type.tile_polys.length; i < len; ++i)
 			{
-				this.ptSize = parseInt(arr[i].substr(0, arr[i].length - 2));
-				this.pxHeight = Math.ceil((this.ptSize / 72.0) * 96.0) + 4;	// assume 96dpi...
-				if (i > 0)
-					this.fontstyle = arr[i - 1];
-				this.facename = arr[i + 1];
-				for (i = i + 2; i < arr.length; i++)
-					this.facename += " " + arr[i];
-				break;
+				p = this.type.tile_polys[i];
+				if (!p)
+					continue;
+				this.type.cacheTilePoly(i, tw, th, false, false, false);
+				this.type.cacheTilePoly(i, tw, th, false, false, true);
+				this.type.cacheTilePoly(i, tw, th, false, true, false);
+				this.type.cacheTilePoly(i, tw, th, false, true, true);
+				this.type.cacheTilePoly(i, tw, th, true, false, false);
+				this.type.cacheTilePoly(i, tw, th, true, false, true);
+				this.type.cacheTilePoly(i, tw, th, true, true, false);
+				this.type.cacheTilePoly(i, tw, th, true, true, true);
+			}
+		}
+		if (!this.recycled)
+			this.tilecells = [];
+		this.maybeResizeTilemap(true);
+		this.setTilesFromRLECSV(this.tilemap_data);
+		this.type.maybeCutTiles(this.tilewidth, this.tileheight, this.tilexoffset, this.tileyoffset, this.tilexspacing, this.tileyspacing, this.seamless);
+		this.physics_changed = false;		// to indicate to physics behavior to recreate body
+		this.any_quadmap_changed = true;
+		this.maybeBuildAllQuadMap();
+	};
+	instanceProto.maybeBuildAllQuadMap = function ()
+	{
+		if (!this.any_quadmap_changed)
+			return;		// no change
+		var i, len, j, lenj, arr;
+		for (i = 0, len = this.tilecells.length; i < len; ++i)
+		{
+			arr = this.tilecells[i];
+			for (j = 0, lenj = arr.length; j < lenj; ++j)
+			{
+				arr[j].maybeBuildQuadMap();
+			}
+		}
+		this.any_quadmap_changed = false;
+	};
+	instanceProto.setAllQuadMapChanged = function ()
+	{
+		var i, len, j, lenj, arr;
+		for (i = 0, len = this.tilecells.length; i < len; ++i)
+		{
+			arr = this.tilecells[i];
+			for (j = 0, lenj = arr.length; j < lenj; ++j)
+			{
+				arr[j].quadmap_valid = false;
+			}
+		}
+		this.any_quadmap_changed = true;
+	};
+	function RunLengthDecode(str)
+	{
+		var ret = [];
+		var parts = str.split(",");
+		var i, len, p, x, n, t, part;
+		for (i = 0, len = parts.length; i < len; ++i)
+		{
+			p = parts[i];
+			x = p.indexOf("x");
+			if (x > -1)
+			{
+				n = parseInt(p.substring(0, x), 10);
+				part = p.substring(x + 1);
+				t = parseInt(part, 10);
+				if (part.indexOf("h") > -1)
+					t = t | TILE_FLIPPED_HORIZONTAL;
+				if (part.indexOf("v") > -1)
+					t = t | TILE_FLIPPED_VERTICAL;
+				if (part.indexOf("d") > -1)
+					t = t | TILE_FLIPPED_DIAGONAL;
+				for ( ; n > 0; --n)
+					ret.push(t);
+			}
+			else
+			{
+				t = parseInt(p, 10);
+				if (p.indexOf("h") > -1)
+					t = t | TILE_FLIPPED_HORIZONTAL;
+				if (p.indexOf("v") > -1)
+					t = t | TILE_FLIPPED_VERTICAL;
+				if (p.indexOf("d") > -1)
+					t = t | TILE_FLIPPED_DIAGONAL;
+				ret.push(t);
+			}
+		}
+		return ret;
+	};
+	instanceProto.maybeResizeTilemap = function (force)
+	{
+		var curwidth = cr.floor(this.width / this.tilewidth);
+		var curheight = cr.floor(this.height / this.tileheight);
+		if (curwidth <= this.mapwidth && curheight <= this.mapheight && !force)
+			return;
+		var vcells, hcells;
+		if (force)
+		{
+			vcells = Math.ceil(this.mapheight / this.cellheight);
+			hcells = Math.ceil(this.mapwidth / this.cellwidth);
+		}
+		else
+		{
+			vcells = this.tilecells.length;
+			hcells = Math.ceil(this.mapwidth / this.cellwidth);
+			if (curheight > this.mapheight)
+			{
+				this.mapheight = curheight;
+				vcells = Math.ceil(this.mapheight / this.cellheight);
+			}
+			if (curwidth > this.mapwidth)
+			{
+				this.mapwidth = curwidth;
+				hcells = Math.ceil(this.mapwidth / this.cellwidth);
+			}
+			this.setAllQuadMapChanged();
+			this.physics_changed = true;
+			this.runtime.redraw = true;
+		}
+		var y, x, arr;
+		for (y = 0; y < vcells; ++y)
+		{
+			arr = this.tilecells[y];
+			if (!arr)
+			{
+				arr = [];
+				for (x = 0; x < hcells; ++x)
+					arr.push(allocTileCell(this, x, y));
+				this.tilecells[y] = arr;
+			}
+			else
+			{
+				for (x = arr.length; x < hcells; ++x)
+					arr.push(allocTileCell(this, x, y));
 			}
 		}
 	};
-	instanceProto.saveToJSON = function ()
+	instanceProto.cellAt = function (tx, ty)
 	{
-		return {
-			"t": this.text,
-			"f": this.font,
-			"c": this.color,
-			"ha": this.halign,
-			"va": this.valign,
-			"wr": this.wrapbyword,
-			"lho": this.line_height_offset,
-			"fn": this.facename,
-			"fs": this.fontstyle,
-			"ps": this.ptSize,
-			"pxh": this.pxHeight,
-			"tw": this.textWidth,
-			"th": this.textHeight,
-			"lrt": this.last_render_tick
-		};
+		if (tx < 0 || ty < 0)
+			return null;
+		var cy = cr.floor(ty / this.cellheight);
+		if (cy >= this.tilecells.length)
+			return null;
+		var row = this.tilecells[cy];
+		var cx = cr.floor(tx / this.cellwidth);
+		if (cx >= row.length)
+			return null;
+		return row[cx];
 	};
-	instanceProto.loadFromJSON = function (o)
+	instanceProto.cellAtIndex = function (cx, cy)
 	{
-		this.text = o["t"];
-		this.font = o["f"];
-		this.color = o["c"];
-		this.halign = o["ha"];
-		this.valign = o["va"];
-		this.wrapbyword = o["wr"];
-		this.line_height_offset = o["lho"];
-		this.facename = o["fn"];
-		this.fontstyle = o["fs"];
-		this.ptSize = o["ps"];
-		this.pxHeight = o["pxh"];
-		this.textWidth = o["tw"];
-		this.textHeight = o["th"];
-		this.last_render_tick = o["lrt"];
-		this.text_changed = true;
-		this.lastwidth = this.width;
-		this.lastwrapwidth = this.width;
-		this.lastheight = this.height;
+		if (cx < 0 || cy < 0 || cy >= this.tilecells.length)
+			return null;
+		var row = this.tilecells[cy];
+		if (cx >= row.length)
+			return null;
+		return row[cx];
 	};
-	instanceProto.tick = function ()
+	instanceProto.setTilesFromRLECSV = function (str)
 	{
-		if (this.runtime.glwrap && this.mytex && (this.runtime.tickcount - this.last_render_tick >= 300))
+		var tilestream = RunLengthDecode(str);
+		var next = 0;
+		var y, x, arr, tile, cell;
+		for (y = 0; y < this.mapheight; ++y)
 		{
-			var layer = this.layer;
-            this.update_bbox();
-            var bbox = this.bbox;
-            if (bbox.right < layer.viewLeft || bbox.bottom < layer.viewTop || bbox.left > layer.viewRight || bbox.top > layer.viewBottom)
+			for (x = 0; x < this.mapwidth; ++x)
 			{
-				this.runtime.glwrap.deleteTexture(this.mytex);
-				this.mytex = null;
-				this.myctx = null;
-				this.mycanvas = null;
+				tile = tilestream[next++];
+				cell = this.cellAt(x, y);
+				if (cell)
+					cell.setTileAt(x % this.cellwidth, y % this.cellheight, tile);
+			}
+		}
+	};
+	instanceProto.getTilesAsRLECSV = function ()
+	{
+		var ret = "";
+		if (this.mapwidth <= 0 || this.mapheight <= 0)
+			return ret;
+		var run_count = 1;
+		var run_number = this.getTileAt(0, 0);
+		var y, leny, x, lenx, t;
+		var tileid, horiz_flip, vert_flip, diag_flip;
+		lenx = cr.floor(this.width / this.tilewidth);
+		leny = cr.floor(this.height / this.tileheight);
+		for (y = 0; y < leny; ++y)
+		{
+			for (x = (y === 0 ? 1 : 0) ; x < lenx; ++x)
+			{
+				t = this.getTileAt(x, y);
+				if (t === run_number)
+					++run_count;
+				else
+				{
+					if (run_number === -1)
+					{
+						tileid = -1;
+						horiz_flip = false;
+						vert_flip = false;
+						diag_flip = false;
+					}
+					else
+					{
+						tileid = (run_number & TILE_ID_MASK);
+						horiz_flip = (run_number & TILE_FLIPPED_HORIZONTAL) !== 0;
+						vert_flip = (run_number & TILE_FLIPPED_VERTICAL) !== 0;
+						diag_flip = (run_number & TILE_FLIPPED_DIAGONAL) !== 0;
+					}
+					if (run_count === 1)
+						ret += "" + tileid;
+					else
+						ret += "" + run_count + "x" + tileid;
+					if (horiz_flip)
+						ret += "h";
+					if (vert_flip)
+						ret += "v";
+					if (diag_flip)
+						ret += "d";
+					ret += ",";
+					run_count = 1;
+					run_number = t;
+				}
+			}
+		}
+		if (run_number === -1)
+		{
+			tileid = -1;
+			horiz_flip = false;
+			vert_flip = false;
+			diag_flip = false;
+		}
+		else
+		{
+			tileid = (run_number & TILE_ID_MASK);
+			horiz_flip = (run_number & TILE_FLIPPED_HORIZONTAL) !== 0;
+			vert_flip = (run_number & TILE_FLIPPED_VERTICAL) !== 0;
+			diag_flip = (run_number & TILE_FLIPPED_DIAGONAL) !== 0;
+		}
+		if (run_count === 1)
+			ret += "" + tileid;
+		else
+			ret += "" + run_count + "x" + tileid;
+		if (horiz_flip)
+			ret += "h";
+		if (vert_flip)
+			ret += "v";
+		if (diag_flip)
+			ret += "d";
+		return ret;
+	};
+	instanceProto.getTileAt = function (x_, y_)
+	{
+		x_ = Math.floor(x_);
+		y_ = Math.floor(y_);
+		if (x_ < 0 || y_ < 0 || x_ >= this.mapwidth || y_ >= this.mapheight)
+			return -1;
+		var cell = this.cellAt(x_, y_);
+		if (!cell)
+			return -1;
+		return cell.tiles[y_ % this.cellheight][x_ % this.cellwidth];
+	};
+	instanceProto.setTileAt = function (x_, y_, t_)
+	{
+		x_ = Math.floor(x_);
+		y_ = Math.floor(y_);
+		if (x_ < 0 || y_ < 0 || x_ >= this.mapwidth || y_ >= this.mapheight)
+			return -1;
+		var cell = this.cellAt(x_, y_);
+		if (!cell)
+			return -1;
+		cell.setTileAt(x_ % this.cellwidth, y_ % this.cellheight, t_);
+	};
+	instanceProto.worldToCellX = function (x)
+	{
+		return Math.floor((x - this.x) / (this.cellwidth * this.tilewidth));
+	};
+	instanceProto.worldToCellY = function (y)
+	{
+		return Math.floor((y - this.y) / (this.cellheight * this.tileheight));
+	};
+	instanceProto.worldToTileX = function (x)
+	{
+		return Math.floor((x - this.x) / this.tilewidth)
+	};
+	instanceProto.worldToTileY = function (y)
+	{
+		return Math.floor((y - this.y) / this.tileheight);
+	};
+	instanceProto.getCollisionRectCandidates = function (bbox, candidates)
+	{
+		var firstCellX = this.worldToCellX(bbox.left);
+		var firstCellY = this.worldToCellY(bbox.top);
+		var lastCellX = this.worldToCellX(bbox.right);
+		var lastCellY = this.worldToCellY(bbox.bottom);
+		var cx, cy, cell;
+		for (cx = firstCellX; cx <= lastCellX; ++cx)
+		{
+			for (cy = firstCellY; cy <= lastCellY; ++cy)
+			{
+				cell = this.cellAtIndex(cx, cy);
+				if (!cell)
+					continue;
+				cell.maybeBuildQuadMap();
+				cr.appendArray(candidates, cell.collision_rects);
+			}
+		}
+	};
+	instanceProto.testPointOverlapTile = function (x, y)
+	{
+		var tx = this.worldToTileX(x);
+		var ty = this.worldToTileY(y);
+		var tile = this.getTileAt(tx, ty);
+		if (tile === -1)
+			return false;		// empty tile here
+		var poly = this.type.getTilePoly(tile);
+		if (!poly)
+			return true;		// no poly; whole tile registers overlap
+		var tileStartX = (Math.floor((x - this.x) / this.tilewidth) * this.tilewidth) + this.x;
+		var tileStartY = (Math.floor((y - this.y) / this.tileheight) * this.tileheight) + this.y;
+		x -= tileStartX;
+		y -= tileStartY;
+		return poly.contains_pt(x, y);
+	};
+	instanceProto.getAllCollisionRects = function (candidates)
+	{
+		var i, len, j, lenj, row, cell;
+		for (i = 0, len = this.tilecells.length; i < len; ++i)
+		{
+			row = this.tilecells[i];
+			for (j = 0, lenj = row.length; j < lenj; ++j)
+			{
+				cell = row[j];
+				cell.maybeBuildQuadMap();
+				cr.appendArray(candidates, cell.collision_rects);
 			}
 		}
 	};
 	instanceProto.onDestroy = function ()
 	{
-		this.myctx = null;
-		this.mycanvas = null;
-		if (this.runtime.glwrap && this.mytex)
-			this.runtime.glwrap.deleteTexture(this.mytex);
-		this.mytex = null;
-	};
-	instanceProto.updateFont = function ()
-	{
-		this.font = this.fontstyle + " " + this.ptSize.toString() + "pt " + this.facename;
-		this.text_changed = true;
-		this.runtime.redraw = true;
-	};
-	instanceProto.draw = function(ctx, glmode)
-	{
-		ctx.font = this.font;
-		ctx.textBaseline = "top";
-		ctx.fillStyle = this.color;
-		ctx.globalAlpha = glmode ? 1 : this.opacity;
-		var myscale = 1;
-		if (glmode)
+		var i, len, j, lenj, arr;
+		for (i = 0, len = this.tilecells.length; i < len; ++i)
 		{
-			myscale = Math.abs(this.layer.getScale());
-			ctx.save();
-			ctx.scale(myscale, myscale);
+			arr = this.tilecells[i];
+			for (j = 0, lenj = arr.length; j < lenj; ++j)
+			{
+				freeTileCell(arr[j]);
+			}
+			cr.clearArray(arr);
 		}
-		if (this.text_changed || this.width !== this.lastwrapwidth)
+		cr.clearArray(this.tilecells);
+	};
+	instanceProto.saveToJSON = function ()
+	{
+		this.maybeResizeTilemap();
+		var curwidth = cr.floor(this.width / this.tilewidth);
+		var curheight = cr.floor(this.height / this.tileheight);
+		return {
+			"w": curwidth,
+			"h": curheight,
+			"d": this.getTilesAsRLECSV()
+		};
+	};
+	instanceProto.loadFromJSON = function (o)
+	{
+		this.mapwidth = o["w"];
+		this.mapheight = o["h"];
+		this.maybeResizeTilemap(true);
+		this.setTilesFromRLECSV(o["d"]);
+		this.physics_changed = true;
+		this.setAllQuadMapChanged();
+	};
+	instanceProto.draw = function(ctx)
+	{
+		if (this.tilewidth <= 0 || this.tileheight <= 0)
+			return;
+		this.type.maybeCutTiles(this.tilewidth, this.tileheight, this.tilexoffset, this.tileyoffset, this.tilexspacing, this.tileyspacing, this.seamless);
+		if (this.width !== this.lastwidth || this.height !== this.lastheight)
 		{
-			this.type.plugin.WordWrap(this.text, this.lines, ctx, this.width, this.wrapbyword);
-			this.text_changed = false;
-			this.lastwrapwidth = this.width;
+			this.physics_changed = true;
+			this.setAllQuadMapChanged();
+			this.maybeBuildAllQuadMap();
+			this.lastwidth = this.width;
+			this.lastheight = this.height;
 		}
-		this.update_bbox();
-		var penX = glmode ? 0 : this.bquad.tlx;
-		var penY = glmode ? 0 : this.bquad.tly;
+		ctx.globalAlpha = this.opacity;
+		var layer = this.layer;
+		var viewLeft = layer.viewLeft;
+		var viewTop = layer.viewTop;
+		var viewRight = layer.viewRight;
+		var viewBottom = layer.viewBottom;
+		var myx = this.x;
+		var myy = this.y;
+		var seamless = this.seamless;
+		var qrc;
 		if (this.runtime.pixel_rounding)
 		{
-			penX = (penX + 0.5) | 0;
-			penY = (penY + 0.5) | 0;
+			myx = Math.round(myx);
+			myy = Math.round(myy);
 		}
-		if (this.angle !== 0 && !glmode)
+		var cellWidthPx = this.cellwidth * this.tilewidth;
+		var cellHeightPx = this.cellheight * this.tileheight;
+		var firstCellX = Math.floor((viewLeft - myx) / cellWidthPx);
+		var lastCellX = Math.floor((viewRight - myx) / cellWidthPx);
+		var firstCellY = Math.floor((viewTop - myy) / cellHeightPx);
+		var lastCellY = Math.floor((viewBottom - myy) / cellHeightPx);
+		var offx = myx % this.tilewidth;
+		var offy = myy % this.tileheight;
+		if (this.seamless)
+		{
+			offx = 0;
+			offy = 0;
+		}
+		if (offx !== 0 || offy !== 0)
 		{
 			ctx.save();
-			ctx.translate(penX, penY);
-			ctx.rotate(this.angle);
-			penX = 0;
-			penY = 0;
+			ctx.translate(offx, offy);
+			myx -= offx;
+			myy -= offy;
+			viewLeft -= offx;
+			viewTop -= offy;
+			viewRight -= offx;
+			viewBottom -= offy;
 		}
-		var endY = penY + this.height;
-		var line_height = this.pxHeight;
-		line_height += this.line_height_offset;
-		var drawX;
-		var i;
-		if (this.valign === 1)		// center
-			penY += Math.max(this.height / 2 - (this.lines.length * line_height) / 2, 0);
-		else if (this.valign === 2)	// bottom
-			penY += Math.max(this.height - (this.lines.length * line_height) - 2, 0);
-		for (i = 0; i < this.lines.length; i++)
+		var cx, cy, cell, i, len, q, qleft, qtop, qright, qbottom, img;
+		for (cx = firstCellX; cx <= lastCellX; ++cx)
 		{
-			drawX = penX;
-			if (this.halign === 1)		// center
-				drawX = penX + (this.width - this.lines[i].width) / 2;
-			else if (this.halign === 2)	// right
-				drawX = penX + (this.width - this.lines[i].width);
-			ctx.fillText(this.lines[i].text, drawX, penY);
-			penY += line_height;
-			if (penY >= endY - line_height)
-				break;
-		}
-		if (this.angle !== 0 || glmode)
-			ctx.restore();
-		this.last_render_tick = this.runtime.tickcount;
-	};
-	instanceProto.drawGL = function(glw)
-	{
-		if (this.width < 1 || this.height < 1)
-			return;
-		var need_redraw = this.text_changed || this.need_text_redraw;
-		this.need_text_redraw = false;
-		var layer_scale = this.layer.getScale();
-		var layer_angle = this.layer.getAngle();
-		var rcTex = this.rcTex;
-		var floatscaledwidth = layer_scale * this.width;
-		var floatscaledheight = layer_scale * this.height;
-		var scaledwidth = Math.ceil(floatscaledwidth);
-		var scaledheight = Math.ceil(floatscaledheight);
-		var absscaledwidth = Math.abs(scaledwidth);
-		var absscaledheight = Math.abs(scaledheight);
-		var halfw = this.runtime.draw_width / 2;
-		var halfh = this.runtime.draw_height / 2;
-		if (!this.myctx)
-		{
-			this.mycanvas = document.createElement("canvas");
-			this.mycanvas.width = absscaledwidth;
-			this.mycanvas.height = absscaledheight;
-			this.lastwidth = absscaledwidth;
-			this.lastheight = absscaledheight;
-			need_redraw = true;
-			this.myctx = this.mycanvas.getContext("2d");
-		}
-		if (absscaledwidth !== this.lastwidth || absscaledheight !== this.lastheight)
-		{
-			this.mycanvas.width = absscaledwidth;
-			this.mycanvas.height = absscaledheight;
-			if (this.mytex)
+			for (cy = firstCellY; cy <= lastCellY; ++cy)
 			{
-				glw.deleteTexture(this.mytex);
-				this.mytex = null;
-			}
-			need_redraw = true;
-		}
-		if (need_redraw)
-		{
-			this.myctx.clearRect(0, 0, absscaledwidth, absscaledheight);
-			this.draw(this.myctx, true);
-			if (!this.mytex)
-				this.mytex = glw.createEmptyTexture(absscaledwidth, absscaledheight, this.runtime.linearSampling, this.runtime.isMobile);
-			glw.videoToTexture(this.mycanvas, this.mytex, this.runtime.isMobile);
-		}
-		this.lastwidth = absscaledwidth;
-		this.lastheight = absscaledheight;
-		glw.setTexture(this.mytex);
-		glw.setOpacity(this.opacity);
-		glw.resetModelView();
-		glw.translate(-halfw, -halfh);
-		glw.updateModelView();
-		var q = this.bquad;
-		var tlx = this.layer.layerToCanvas(q.tlx, q.tly, true, true);
-		var tly = this.layer.layerToCanvas(q.tlx, q.tly, false, true);
-		var trx = this.layer.layerToCanvas(q.trx, q.try_, true, true);
-		var try_ = this.layer.layerToCanvas(q.trx, q.try_, false, true);
-		var brx = this.layer.layerToCanvas(q.brx, q.bry, true, true);
-		var bry = this.layer.layerToCanvas(q.brx, q.bry, false, true);
-		var blx = this.layer.layerToCanvas(q.blx, q.bly, true, true);
-		var bly = this.layer.layerToCanvas(q.blx, q.bly, false, true);
-		if (this.runtime.pixel_rounding || (this.angle === 0 && layer_angle === 0))
-		{
-			var ox = ((tlx + 0.5) | 0) - tlx;
-			var oy = ((tly + 0.5) | 0) - tly
-			tlx += ox;
-			tly += oy;
-			trx += ox;
-			try_ += oy;
-			brx += ox;
-			bry += oy;
-			blx += ox;
-			bly += oy;
-		}
-		if (this.angle === 0 && layer_angle === 0)
-		{
-			trx = tlx + scaledwidth;
-			try_ = tly;
-			brx = trx;
-			bry = tly + scaledheight;
-			blx = tlx;
-			bly = bry;
-			rcTex.right = 1;
-			rcTex.bottom = 1;
-		}
-		else
-		{
-			rcTex.right = floatscaledwidth / scaledwidth;
-			rcTex.bottom = floatscaledheight / scaledheight;
-		}
-		glw.quadTex(tlx, tly, trx, try_, brx, bry, blx, bly, rcTex);
-		glw.resetModelView();
-		glw.scale(layer_scale, layer_scale);
-		glw.rotateZ(-this.layer.getAngle());
-		glw.translate((this.layer.viewLeft + this.layer.viewRight) / -2, (this.layer.viewTop + this.layer.viewBottom) / -2);
-		glw.updateModelView();
-		this.last_render_tick = this.runtime.tickcount;
-	};
-	var wordsCache = [];
-	pluginProto.TokeniseWords = function (text)
-	{
-		cr.clearArray(wordsCache);
-		var cur_word = "";
-		var ch;
-		var i = 0;
-		while (i < text.length)
-		{
-			ch = text.charAt(i);
-			if (ch === "\n")
-			{
-				if (cur_word.length)
+				cell = this.cellAtIndex(cx, cy);
+				if (!cell)
+					continue;
+				cell.maybeBuildQuadMap();
+				for (i = 0, len = cell.quads.length; i < len; ++i)
 				{
-					wordsCache.push(cur_word);
-					cur_word = "";
+					q = cell.quads[i];
+					if (q.id === -1)
+						continue;
+					qrc = q.rc;
+					qleft = qrc.left + myx;
+					qtop = qrc.top + myy;
+					qright = qrc.right + myx;
+					qbottom = qrc.bottom + myy;
+					if (qleft > viewRight || qright < viewLeft || qtop > viewBottom || qbottom < viewTop)
+						continue;
+					img = this.type.GetFlippedTileImage(q.tileid, q.horiz_flip, q.vert_flip, q.diag_flip, this.seamless);
+					if (seamless)
+					{
+						ctx.drawImage(img, qleft, qtop);
+					}
+					else
+					{
+						ctx.fillStyle = this.type.GetFlippedTileImage(q.tileid, q.horiz_flip, q.vert_flip, q.diag_flip, this.seamless);
+						ctx.fillRect(qleft, qtop, qright - qleft, qbottom - qtop);
+					}
 				}
-				wordsCache.push("\n");
-				++i;
-			}
-			else if (ch === " " || ch === "\t" || ch === "-")
-			{
-				do {
-					cur_word += text.charAt(i);
-					i++;
+				/*
+				for (i = 0, len = cell.collision_rects.length; i < len; ++i)
+				{
+					qrc = cell.collision_rects[i].rc;
+					qleft = qrc.left + myx;
+					qtop = qrc.top + myy;
+					qright = qrc.right + myx;
+					qbottom = qrc.bottom + myy;
+					ctx.strokeRect(qleft, qtop, qright - qleft, qbottom - qtop);
 				}
-				while (i < text.length && (text.charAt(i) === " " || text.charAt(i) === "\t"));
-				wordsCache.push(cur_word);
-				cur_word = "";
-			}
-			else if (i < text.length)
-			{
-				cur_word += ch;
-				i++;
+				*/
 			}
 		}
-		if (cur_word.length)
-			wordsCache.push(cur_word);
+		if (offx !== 0 || offy !== 0)
+			ctx.restore();
 	};
-	var linesCache = [];
-	function allocLine()
+	var tmp_rect = new cr.rect(0, 0, 1, 1);
+	instanceProto.drawGL_earlyZPass = function(glw)
 	{
-		if (linesCache.length)
-			return linesCache.pop();
-		else
-			return {};
+		this.drawGL(glw);
 	};
-	function freeLine(l)
+	instanceProto.drawGL = function (glw)
 	{
-		linesCache.push(l);
-	};
-	function freeAllLines(arr)
-	{
-		var i, len;
-		for (i = 0, len = arr.length; i < len; i++)
-		{
-			freeLine(arr[i]);
-		}
-		cr.clearArray(arr);
-	};
-	pluginProto.WordWrap = function (text, lines, ctx, width, wrapbyword)
-	{
-		if (!text || !text.length)
-		{
-			freeAllLines(lines);
+		if (this.tilewidth <= 0 || this.tileheight <= 0)
 			return;
-		}
-		if (width <= 2.0)
+		this.type.maybeCutTiles(this.tilewidth, this.tileheight, this.tilexoffset, this.tileyoffset, this.tilexspacing, this.tileyspacing, this.seamless);
+		if (this.width !== this.lastwidth || this.height !== this.lastheight)
 		{
-			freeAllLines(lines);
-			return;
+			this.physics_changed = true;
+			this.setAllQuadMapChanged();
+			this.maybeBuildAllQuadMap();
+			this.lastwidth = this.width;
+			this.lastheight = this.height;
 		}
-		if (text.length <= 100 && text.indexOf("\n") === -1)
+		glw.setOpacity(this.opacity);
+		var cut_tiles = this.type.cut_tiles;
+		var layer = this.layer;
+		var viewLeft = layer.viewLeft;
+		var viewTop = layer.viewTop;
+		var viewRight = layer.viewRight;
+		var viewBottom = layer.viewBottom;
+		var myx = this.x;
+		var myy = this.y;
+		var qrc;
+		if (this.runtime.pixel_rounding)
 		{
-			var all_width = ctx.measureText(text).width;
-			if (all_width <= width)
+			myx = Math.round(myx);
+			myy = Math.round(myy);
+		}
+		var cellWidthPx = this.cellwidth * this.tilewidth;
+		var cellHeightPx = this.cellheight * this.tileheight;
+		var firstCellX = Math.floor((viewLeft - myx) / cellWidthPx);
+		var lastCellX = Math.floor((viewRight - myx) / cellWidthPx);
+		var firstCellY = Math.floor((viewTop - myy) / cellHeightPx);
+		var lastCellY = Math.floor((viewBottom - myy) / cellHeightPx);
+		var i, len, q, qleft, qtop, qright, qbottom;
+		var qtlx, qtly, qtrx, qtry, qbrx, qbry, qblx, qbly, temp;
+		var cx, cy, cell;
+		for (cx = firstCellX; cx <= lastCellX; ++cx)
+		{
+			for (cy = firstCellY; cy <= lastCellY; ++cy)
 			{
-				freeAllLines(lines);
-				lines.push(allocLine());
-				lines[0].text = text;
-				lines[0].width = all_width;
-				return;
+				cell = this.cellAtIndex(cx, cy);
+				if (!cell)
+					continue;
+				cell.maybeBuildQuadMap();
+				for (i = 0, len = cell.quads.length; i < len; ++i)
+				{
+					q = cell.quads[i];
+					if (q.id === -1)
+						continue;
+					qrc = q.rc;
+					qleft = qrc.left + myx;
+					qtop = qrc.top + myy;
+					qright = qrc.right + myx;
+					qbottom = qrc.bottom + myy;
+					if (qleft > viewRight || qright < viewLeft || qtop > viewBottom || qbottom < viewTop)
+						continue;
+					glw.setTexture(cut_tiles[q.tileid]);
+					tmp_rect.right = (qright - qleft) / this.tilewidth;
+					tmp_rect.bottom = (qbottom - qtop) / this.tileheight;
+					if (q.any_flip)
+					{
+						if (q.diag_flip)
+						{
+							temp = tmp_rect.right;
+							tmp_rect.right = tmp_rect.bottom;
+							tmp_rect.bottom = temp;
+						}
+						qtlx = 0;
+						qtly = 0;
+						qtrx = tmp_rect.right;
+						qtry = 0;
+						qbrx = tmp_rect.right;
+						qbry = tmp_rect.bottom;
+						qblx = 0;
+						qbly = tmp_rect.bottom;
+						if (q.diag_flip)
+						{
+							temp = qblx;		qblx = qtrx;		qtrx = temp;
+							temp = qbly;		qbly = qtry;		qtry = temp;
+						}
+						if (q.horiz_flip)
+						{
+							temp = qtlx;		qtlx = qtrx;		qtrx = temp;
+							temp = qtly;		qtly = qtry;		qtry = temp;
+							temp = qblx;		qblx = qbrx;		qbrx = temp;
+							temp = qbly;		qbly = qbry;		qbry = temp;
+						}
+						if (q.vert_flip)
+						{
+							temp = qtlx;		qtlx = qblx;		qblx = temp;
+							temp = qtly;		qtly = qbly;		qbly = temp;
+							temp = qtrx;		qtrx = qbrx;		qbrx = temp;
+							temp = qtry;		qtry = qbry;		qbry = temp;
+						}
+						glw.quadTexUV(qleft, qtop, qright, qtop, qright, qbottom, qleft, qbottom, qtlx, qtly, qtrx, qtry, qbrx, qbry, qblx, qbly);
+					}
+					else
+					{
+						glw.quadTex(qleft, qtop, qright, qtop, qright, qbottom, qleft, qbottom, tmp_rect);
+					}
+				}
 			}
 		}
-		this.WrapText(text, lines, ctx, width, wrapbyword);
-	};
-	function trimSingleSpaceRight(str)
-	{
-		if (!str.length || str.charAt(str.length - 1) !== " ")
-			return str;
-		return str.substring(0, str.length - 1);
-	};
-	pluginProto.WrapText = function (text, lines, ctx, width, wrapbyword)
-	{
-		var wordArray;
-		if (wrapbyword)
-		{
-			this.TokeniseWords(text);	// writes to wordsCache
-			wordArray = wordsCache;
-		}
-		else
-			wordArray = text;
-		var cur_line = "";
-		var prev_line;
-		var line_width;
-		var i;
-		var lineIndex = 0;
-		var line;
-		for (i = 0; i < wordArray.length; i++)
-		{
-			if (wordArray[i] === "\n")
-			{
-				if (lineIndex >= lines.length)
-					lines.push(allocLine());
-				cur_line = trimSingleSpaceRight(cur_line);		// for correct center/right alignment
-				line = lines[lineIndex];
-				line.text = cur_line;
-				line.width = ctx.measureText(cur_line).width;
-				lineIndex++;
-				cur_line = "";
-				continue;
-			}
-			prev_line = cur_line;
-			cur_line += wordArray[i];
-			line_width = ctx.measureText(cur_line).width;
-			if (line_width >= width)
-			{
-				if (lineIndex >= lines.length)
-					lines.push(allocLine());
-				prev_line = trimSingleSpaceRight(prev_line);
-				line = lines[lineIndex];
-				line.text = prev_line;
-				line.width = ctx.measureText(prev_line).width;
-				lineIndex++;
-				cur_line = wordArray[i];
-				if (!wrapbyword && cur_line === " ")
-					cur_line = "";
-			}
-		}
-		if (cur_line.length)
-		{
-			if (lineIndex >= lines.length)
-				lines.push(allocLine());
-			cur_line = trimSingleSpaceRight(cur_line);
-			line = lines[lineIndex];
-			line.text = cur_line;
-			line.width = ctx.measureText(cur_line).width;
-			lineIndex++;
-		}
-		for (i = lineIndex; i < lines.length; i++)
-			freeLine(lines[i]);
-		lines.length = lineIndex;
 	};
 	function Cnds() {};
-	Cnds.prototype.CompareText = function(text_to_compare, case_sensitive)
+	Cnds.prototype.CompareTileAt = function (tx, ty, cmp, t)
 	{
-		if (case_sensitive)
-			return this.text == text_to_compare;
-		else
-			return cr.equals_nocase(this.text, text_to_compare);
+		var tile = this.getTileAt(tx, ty);
+		if (tile !== -1)
+			tile = (tile & TILE_ID_MASK);
+		return cr.do_cmp(tile, cmp, t);
+	};
+	function StateComboToFlags(state)
+	{
+		switch (state) {
+		case 0:		// normal
+			return 0;
+		case 1:		// flipped horizontal
+			return TILE_FLIPPED_HORIZONTAL;
+		case 2:		// flipped vertical
+			return TILE_FLIPPED_VERTICAL;
+		case 3:		// rotated 90
+			return TILE_FLIPPED_HORIZONTAL | TILE_FLIPPED_DIAGONAL;
+		case 4:		// rotated 180
+			return TILE_FLIPPED_HORIZONTAL | TILE_FLIPPED_VERTICAL;
+		case 5:		// rotated 270
+			return TILE_FLIPPED_VERTICAL | TILE_FLIPPED_DIAGONAL;
+		case 6:		// rotated 90, flipped vertical
+			return TILE_FLIPPED_HORIZONTAL | TILE_FLIPPED_VERTICAL | TILE_FLIPPED_DIAGONAL;
+		case 7:		// rotated 270, flipped vertical
+			return TILE_FLIPPED_DIAGONAL;
+		default:
+			return 0;
+		}
+	};
+	Cnds.prototype.CompareTileStateAt = function (tx, ty, state)
+	{
+		var tile = this.getTileAt(tx, ty);
+		var flags = 0;
+		if (tile !== -1)
+			flags = (tile & TILE_FLAGS_MASK);
+		return flags === StateComboToFlags(state);
+	};
+	Cnds.prototype.OnURLLoaded = function ()
+	{
+		return true;
 	};
 	pluginProto.cnds = new Cnds();
 	function Acts() {};
-	Acts.prototype.SetText = function(param)
+	Acts.prototype.EraseTile = function (tx, ty)
 	{
-		if (cr.is_number(param) && param < 1e9)
-			param = Math.round(param * 1e10) / 1e10;	// round to nearest ten billionth - hides floating point errors
-		var text_to_set = param.toString();
-		if (this.text !== text_to_set)
+		this.maybeResizeTilemap();
+		this.setTileAt(tx, ty, -1);
+	};
+	Acts.prototype.SetTile = function (tx, ty, t, state)
+	{
+		this.maybeResizeTilemap();
+		this.setTileAt(tx, ty, (t & TILE_ID_MASK) | StateComboToFlags(state));
+	};
+	Acts.prototype.SetTileState = function (tx, ty, state)
+	{
+		var t = this.getTileAt(tx, ty);
+		if (t !== -1)
 		{
-			this.text = text_to_set;
-			this.text_changed = true;
-			this.runtime.redraw = true;
+			this.maybeResizeTilemap();
+			this.setTileAt(tx, ty, (t & TILE_ID_MASK) | StateComboToFlags(state));
 		}
 	};
-	Acts.prototype.AppendText = function(param)
+	Acts.prototype.EraseTileRange = function (tx, ty, tw, th)
 	{
-		if (cr.is_number(param))
-			param = Math.round(param * 1e10) / 1e10;	// round to nearest ten billionth - hides floating point errors
-		var text_to_append = param.toString();
-		if (text_to_append)	// not empty
+		var fromx = Math.floor(cr.max(tx, 0));
+		var fromy = Math.floor(cr.max(ty, 0));
+		var tox = Math.floor(cr.min(tx + tw, this.mapwidth));
+		var toy = Math.floor(cr.min(ty + th, this.mapheight));
+		var x, y;
+		for (y = fromy; y < toy; ++y)
 		{
-			this.text += text_to_append;
-			this.text_changed = true;
-			this.runtime.redraw = true;
-		}
-	};
-	Acts.prototype.SetFontFace = function (face_, style_)
-	{
-		var newstyle = "";
-		switch (style_) {
-		case 1: newstyle = "bold"; break;
-		case 2: newstyle = "italic"; break;
-		case 3: newstyle = "bold italic"; break;
-		}
-		if (face_ === this.facename && newstyle === this.fontstyle)
-			return;		// no change
-		this.facename = face_;
-		this.fontstyle = newstyle;
-		this.updateFont();
-	};
-	Acts.prototype.SetFontSize = function (size_)
-	{
-		if (this.ptSize === size_)
-			return;
-		this.ptSize = size_;
-		this.pxHeight = Math.ceil((this.ptSize / 72.0) * 96.0) + 4;	// assume 96dpi...
-		this.updateFont();
-	};
-	Acts.prototype.SetFontColor = function (rgb)
-	{
-		var newcolor = "rgb(" + cr.GetRValue(rgb).toString() + "," + cr.GetGValue(rgb).toString() + "," + cr.GetBValue(rgb).toString() + ")";
-		if (newcolor === this.color)
-			return;
-		this.color = newcolor;
-		this.need_text_redraw = true;
-		this.runtime.redraw = true;
-	};
-	Acts.prototype.SetWebFont = function (familyname_, cssurl_)
-	{
-		if (this.runtime.isDomFree)
-		{
-			cr.logexport("[Construct 2] Text plugin: 'Set web font' not supported on this platform - the action has been ignored");
-			return;		// DC todo
-		}
-		var self = this;
-		var refreshFunc = (function () {
-							self.runtime.redraw = true;
-							self.text_changed = true;
-						});
-		if (requestedWebFonts.hasOwnProperty(cssurl_))
-		{
-			var newfacename = "'" + familyname_ + "'";
-			if (this.facename === newfacename)
-				return;	// no change
-			this.facename = newfacename;
-			this.updateFont();
-			for (var i = 1; i < 10; i++)
+			for (x = fromx; x < tox; ++x)
 			{
-				setTimeout(refreshFunc, i * 100);
-				setTimeout(refreshFunc, i * 1000);
+				this.setTileAt(x, y, -1);
 			}
+		}
+	};
+	Acts.prototype.SetTileRange = function (tx, ty, tw, th, t, state)
+	{
+		this.maybeResizeTilemap();
+		var fromx = Math.floor(cr.max(tx, 0));
+		var fromy = Math.floor(cr.max(ty, 0));
+		var tox = Math.floor(cr.min(tx + tw, this.mapwidth));
+		var toy = Math.floor(cr.min(ty + th, this.mapheight));
+		var settile = (t & TILE_ID_MASK) | StateComboToFlags(state);
+		var x, y;
+		for (y = fromy; y < toy; ++y)
+		{
+			for (x = fromx; x < tox; ++x)
+			{
+				this.setTileAt(x, y, settile);
+			}
+		}
+	};
+	Acts.prototype.SetTileStateRange = function (tx, ty, tw, th, state)
+	{
+		this.maybeResizeTilemap();
+		var fromx = Math.floor(cr.max(tx, 0));
+		var fromy = Math.floor(cr.max(ty, 0));
+		var tox = Math.floor(cr.min(tx + tw, this.mapwidth));
+		var toy = Math.floor(cr.min(ty + th, this.mapheight));
+		var setstate = StateComboToFlags(state);
+		var x, y, t;
+		for (y = fromy; y < toy; ++y)
+		{
+			for (x = fromx; x < tox; ++x)
+			{
+				t = this.getTileAt(x, y);
+				if (t !== -1)
+					this.setTileAt(x, y, (t & TILE_ID_MASK) | setstate);
+			}
+		}
+	};
+	Acts.prototype.LoadFromJSON = function (str)
+	{
+		var o;
+		try {
+			o = JSON.parse(str);
+		}
+		catch (e) {
 			return;
 		}
-		var wf = document.createElement("link");
-		wf.href = cssurl_;
-		wf.rel = "stylesheet";
-		wf.type = "text/css";
-		wf.onload = refreshFunc;
-		document.getElementsByTagName('head')[0].appendChild(wf);
-		requestedWebFonts[cssurl_] = true;
-		this.facename = "'" + familyname_ + "'";
-		this.updateFont();
-		for (var i = 1; i < 10; i++)
-		{
-			setTimeout(refreshFunc, i * 100);
-			setTimeout(refreshFunc, i * 1000);
-		}
-;
+		if (!o["c2tilemap"])
+			return;		// not a known tilemap data format
+		this.mapwidth = o["width"];
+		this.mapheight = o["height"];
+		this.maybeResizeTilemap(true);
+		this.setTilesFromRLECSV(o["data"]);
+		this.setAllQuadMapChanged();
+		this.physics_changed = true;
 	};
-	Acts.prototype.SetEffect = function (effect)
+	Acts.prototype.JSONDownload = function (filename)
 	{
-		this.blend_mode = effect;
-		this.compositeOp = cr.effectToCompositeOp(effect);
-		cr.setGLBlend(this, effect, this.runtime.gl);
-		this.runtime.redraw = true;
+		var a = document.createElement("a");
+		var o = {
+			"c2tilemap": true,
+			"width": this.mapwidth,
+			"height": this.mapheight,
+			"data": this.getTilesAsRLECSV()
+		};
+		if (typeof a.download === "undefined")
+		{
+			var str = 'data:text/html,' + encodeURIComponent("<p><a download='data.json' href=\"data:application/json,"
+				+ encodeURIComponent(JSON.stringify(o))
+				+ "\">Download link</a></p>");
+			window.open(str);
+		}
+		else
+		{
+			var body = document.getElementsByTagName("body")[0];
+			a.textContent = filename;
+			a.href = "data:application/json," + encodeURIComponent(JSON.stringify(o));
+			a.download = filename;
+			body.appendChild(a);
+			var clickEvent = document.createEvent("MouseEvent");
+			clickEvent.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+			a.dispatchEvent(clickEvent);
+			body.removeChild(a);
+		}
+	};
+	Acts.prototype.LoadURL = function (url_, crossOrigin_)
+	{
+		var img = new Image();
+		var self = this;
+		img.onload = function ()
+		{
+			var type = self.type;
+			type.freeCutTiles();
+			type.texture_img = img;
+			self.runtime.redraw = true;
+			self.runtime.trigger(cr.plugins_.Tilemap.prototype.cnds.OnURLLoaded, self);
+		};
+		if (url_.substr(0, 5) !== "data:" && crossOrigin_ === 0)
+			img.crossOrigin = "anonymous";
+		this.runtime.setImageSrc(img, url_);
 	};
 	pluginProto.acts = new Acts();
 	function Exps() {};
-	Exps.prototype.Text = function(ret)
+	Exps.prototype.TileAt = function (ret, tx, ty)
 	{
-		ret.set_string(this.text);
+		var tile = this.getTileAt(tx, ty);
+		ret.set_int(tile === -1 ? -1 : (tile & TILE_ID_MASK));
 	};
-	Exps.prototype.FaceName = function (ret)
+	Exps.prototype.PositionToTileX = function (ret, x_)
 	{
-		ret.set_string(this.facename);
+		ret.set_float(this.worldToTileX(x_));
 	};
-	Exps.prototype.FaceSize = function (ret)
+	Exps.prototype.PositionToTileY = function (ret, y_)
 	{
-		ret.set_int(this.ptSize);
+		ret.set_float(this.worldToTileY(y_));
 	};
-	Exps.prototype.TextWidth = function (ret)
+	Exps.prototype.TileToPositionX = function (ret, x_)
 	{
-		var w = 0;
-		var i, len, x;
-		for (i = 0, len = this.lines.length; i < len; i++)
-		{
-			x = this.lines[i].width;
-			if (w < x)
-				w = x;
-		}
-		ret.set_int(w);
+		ret.set_float((x_ * this.tilewidth) + this.x + (this.tilewidth / 2));
 	};
-	Exps.prototype.TextHeight = function (ret)
+	Exps.prototype.TileToPositionY = function (ret, y_)
 	{
-		ret.set_int(this.lines.length * (this.pxHeight + this.line_height_offset) - this.line_height_offset);
+		ret.set_float((y_ * this.tileheight) + this.y + (this.tileheight / 2));
+	};
+	Exps.prototype.SnapX = function (ret, x_)
+	{
+		ret.set_float((Math.floor((x_ - this.x) / this.tilewidth) * this.tilewidth) + this.x + (this.tilewidth / 2));
+	};
+	Exps.prototype.SnapY = function (ret, y_)
+	{
+		ret.set_float((Math.floor((y_ - this.y) / this.tileheight) * this.tileheight) + this.y + (this.tileheight / 2));
+	};
+	Exps.prototype.TilesJSON = function (ret)
+	{
+		this.maybeResizeTilemap();
+		var curwidth = cr.floor(this.width / this.tilewidth);
+		var curheight = cr.floor(this.height / this.tileheight);
+		ret.set_string(JSON.stringify({
+			"c2tilemap": true,
+			"width": curwidth,
+			"height": curheight,
+			"data": this.getTilesAsRLECSV()
+		}));
 	};
 	pluginProto.exps = new Exps();
 }());
@@ -18010,170 +19678,6 @@ cr.behaviors.DragnDrop = function(runtime)
 	};
 	behaviorProto.acts = new Acts();
 	function Exps() {};
-	behaviorProto.exps = new Exps();
-}());
-;
-;
-cr.behaviors.Pin = function(runtime)
-{
-	this.runtime = runtime;
-};
-(function ()
-{
-	var behaviorProto = cr.behaviors.Pin.prototype;
-	behaviorProto.Type = function(behavior, objtype)
-	{
-		this.behavior = behavior;
-		this.objtype = objtype;
-		this.runtime = behavior.runtime;
-	};
-	var behtypeProto = behaviorProto.Type.prototype;
-	behtypeProto.onCreate = function()
-	{
-	};
-	behaviorProto.Instance = function(type, inst)
-	{
-		this.type = type;
-		this.behavior = type.behavior;
-		this.inst = inst;				// associated object instance to modify
-		this.runtime = type.runtime;
-	};
-	var behinstProto = behaviorProto.Instance.prototype;
-	behinstProto.onCreate = function()
-	{
-		this.pinObject = null;
-		this.pinObjectUid = -1;		// for loading
-		this.pinAngle = 0;
-		this.pinDist = 0;
-		this.myStartAngle = 0;
-		this.theirStartAngle = 0;
-		this.lastKnownAngle = 0;
-		this.mode = 0;				// 0 = position & angle; 1 = position; 2 = angle; 3 = rope; 4 = bar
-		var self = this;
-		if (!this.recycled)
-		{
-			this.myDestroyCallback = (function(inst) {
-													self.onInstanceDestroyed(inst);
-												});
-		}
-		this.runtime.addDestroyCallback(this.myDestroyCallback);
-	};
-	behinstProto.saveToJSON = function ()
-	{
-		return {
-			"uid": this.pinObject ? this.pinObject.uid : -1,
-			"pa": this.pinAngle,
-			"pd": this.pinDist,
-			"msa": this.myStartAngle,
-			"tsa": this.theirStartAngle,
-			"lka": this.lastKnownAngle,
-			"m": this.mode
-		};
-	};
-	behinstProto.loadFromJSON = function (o)
-	{
-		this.pinObjectUid = o["uid"];		// wait until afterLoad to look up
-		this.pinAngle = o["pa"];
-		this.pinDist = o["pd"];
-		this.myStartAngle = o["msa"];
-		this.theirStartAngle = o["tsa"];
-		this.lastKnownAngle = o["lka"];
-		this.mode = o["m"];
-	};
-	behinstProto.afterLoad = function ()
-	{
-		if (this.pinObjectUid === -1)
-			this.pinObject = null;
-		else
-		{
-			this.pinObject = this.runtime.getObjectByUID(this.pinObjectUid);
-;
-		}
-		this.pinObjectUid = -1;
-	};
-	behinstProto.onInstanceDestroyed = function (inst)
-	{
-		if (this.pinObject == inst)
-			this.pinObject = null;
-	};
-	behinstProto.onDestroy = function()
-	{
-		this.pinObject = null;
-		this.runtime.removeDestroyCallback(this.myDestroyCallback);
-	};
-	behinstProto.tick = function ()
-	{
-	};
-	behinstProto.tick2 = function ()
-	{
-		if (!this.pinObject)
-			return;
-		if (this.lastKnownAngle !== this.inst.angle)
-			this.myStartAngle = cr.clamp_angle(this.myStartAngle + (this.inst.angle - this.lastKnownAngle));
-		var newx = this.inst.x;
-		var newy = this.inst.y;
-		if (this.mode === 3 || this.mode === 4)		// rope mode or bar mode
-		{
-			var dist = cr.distanceTo(this.inst.x, this.inst.y, this.pinObject.x, this.pinObject.y);
-			if ((dist > this.pinDist) || (this.mode === 4 && dist < this.pinDist))
-			{
-				var a = cr.angleTo(this.pinObject.x, this.pinObject.y, this.inst.x, this.inst.y);
-				newx = this.pinObject.x + Math.cos(a) * this.pinDist;
-				newy = this.pinObject.y + Math.sin(a) * this.pinDist;
-			}
-		}
-		else
-		{
-			newx = this.pinObject.x + Math.cos(this.pinObject.angle + this.pinAngle) * this.pinDist;
-			newy = this.pinObject.y + Math.sin(this.pinObject.angle + this.pinAngle) * this.pinDist;
-		}
-		var newangle = cr.clamp_angle(this.myStartAngle + (this.pinObject.angle - this.theirStartAngle));
-		this.lastKnownAngle = newangle;
-		if ((this.mode === 0 || this.mode === 1 || this.mode === 3 || this.mode === 4)
-			&& (this.inst.x !== newx || this.inst.y !== newy))
-		{
-			this.inst.x = newx;
-			this.inst.y = newy;
-			this.inst.set_bbox_changed();
-		}
-		if ((this.mode === 0 || this.mode === 2) && (this.inst.angle !== newangle))
-		{
-			this.inst.angle = newangle;
-			this.inst.set_bbox_changed();
-		}
-	};
-	function Cnds() {};
-	Cnds.prototype.IsPinned = function ()
-	{
-		return !!this.pinObject;
-	};
-	behaviorProto.cnds = new Cnds();
-	function Acts() {};
-	Acts.prototype.Pin = function (obj, mode_)
-	{
-		if (!obj)
-			return;
-		var otherinst = obj.getFirstPicked(this.inst);
-		if (!otherinst)
-			return;
-		this.pinObject = otherinst;
-		this.pinAngle = cr.angleTo(otherinst.x, otherinst.y, this.inst.x, this.inst.y) - otherinst.angle;
-		this.pinDist = cr.distanceTo(otherinst.x, otherinst.y, this.inst.x, this.inst.y);
-		this.myStartAngle = this.inst.angle;
-		this.lastKnownAngle = this.inst.angle;
-		this.theirStartAngle = otherinst.angle;
-		this.mode = mode_;
-	};
-	Acts.prototype.Unpin = function ()
-	{
-		this.pinObject = null;
-	};
-	behaviorProto.acts = new Acts();
-	function Exps() {};
-	Exps.prototype.PinnedUID = function (ret)
-	{
-		ret.set_int(this.pinObject ? this.pinObject.uid : -1);
-	};
 	behaviorProto.exps = new Exps();
 }());
 ;
@@ -19174,45 +20678,6 @@ cr.behaviors.Platform = function(runtime)
 }());
 ;
 ;
-cr.behaviors.destroy = function(runtime)
-{
-	this.runtime = runtime;
-};
-(function ()
-{
-	var behaviorProto = cr.behaviors.destroy.prototype;
-	behaviorProto.Type = function(behavior, objtype)
-	{
-		this.behavior = behavior;
-		this.objtype = objtype;
-		this.runtime = behavior.runtime;
-	};
-	var behtypeProto = behaviorProto.Type.prototype;
-	behtypeProto.onCreate = function()
-	{
-	};
-	behaviorProto.Instance = function(type, inst)
-	{
-		this.type = type;
-		this.behavior = type.behavior;
-		this.inst = inst;				// associated object instance to modify
-		this.runtime = type.runtime;
-	};
-	var behinstProto = behaviorProto.Instance.prototype;
-	behinstProto.onCreate = function()
-	{
-	};
-	behinstProto.tick = function ()
-	{
-		this.inst.update_bbox();
-		var bbox = this.inst.bbox;
-		var layout = this.inst.layer.layout;
-		if (bbox.right < 0 || bbox.bottom < 0 || bbox.left > layout.width || bbox.top > layout.height)
-			this.runtime.DestroyInstance(this.inst);
-	};
-}());
-;
-;
 cr.behaviors.solid = function(runtime)
 {
 	this.runtime = runtime;
@@ -19259,50 +20724,37 @@ cr.behaviors.solid = function(runtime)
 	behaviorProto.acts = new Acts();
 }());
 cr.getObjectRefTable = function () { return [
+	cr.plugins_.Arr,
+	cr.plugins_.Function,
 	cr.plugins_.Keyboard,
 	cr.plugins_.Mouse,
 	cr.plugins_.Sprite,
-	cr.plugins_.Text,
+	cr.plugins_.Tilemap,
 	cr.behaviors.solid,
 	cr.behaviors.Platform,
 	cr.behaviors.DragnDrop,
-	cr.behaviors.destroy,
-	cr.behaviors.Pin,
-	cr.plugins_.Sprite.prototype.cnds.OnCollision,
-	cr.plugins_.Sprite.prototype.cnds.CompareFrame,
-	cr.system_object.prototype.acts.SetGroupActive,
-	cr.system_object.prototype.acts.Wait,
 	cr.system_object.prototype.cnds.IsGroupActive,
-	cr.plugins_.Mouse.prototype.cnds.OnObjectClicked,
-	cr.plugins_.Sprite.prototype.acts.SetAnimFrame,
-	cr.behaviors.Platform.prototype.acts.SetEnabled,
-	cr.plugins_.Sprite.prototype.acts.SetPos,
-	cr.behaviors.DragnDrop.prototype.acts.SetEnabled,
-	cr.behaviors.Platform.prototype.acts.SetGravityAngle,
-	cr.plugins_.Sprite.prototype.acts.SetAngle,
-	cr.plugins_.Mouse.prototype.acts.SetCursorSprite,
-	cr.plugins_.Sprite.prototype.acts.SetVisible,
-	cr.plugins_.Keyboard.prototype.cnds.OnKeyReleased,
 	cr.system_object.prototype.cnds.EveryTick,
-	cr.plugins_.Text.prototype.acts.SetPos,
-	cr.plugins_.Mouse.prototype.exps.X,
-	cr.plugins_.Mouse.prototype.exps.Y,
-	cr.plugins_.Text.prototype.acts.SetText,
-	cr.plugins_.Sprite.prototype.cnds.IsOverlapping,
-	cr.plugins_.Sprite.prototype.cnds.PickTopBottom,
-	cr.plugins_.Sprite.prototype.acts.Destroy,
-	cr.system_object.prototype.acts.SetVar,
-	cr.plugins_.Keyboard.prototype.cnds.IsKeyDown,
-	cr.behaviors.Platform.prototype.acts.SimulateControl,
+	cr.system_object.prototype.acts.SetLayerOpacity,
+	cr.system_object.prototype.exps.layeropacity,
+	cr.system_object.prototype.cnds.LayerCmpOpacity,
+	cr.system_object.prototype.acts.RestartLayout,
+	cr.plugins_.Sprite.prototype.cnds.OnCollision,
+	cr.plugins_.Sprite.prototype.acts.SetInstanceVar,
+	cr.plugins_.Sprite.prototype.acts.SetAnimFrame,
+	cr.behaviors.Platform.prototype.acts.SetGravityAngle,
+	cr.plugins_.Sprite.prototype.acts.SetAnim,
 	cr.plugins_.Sprite.prototype.cnds.IsOnScreen,
-	cr.system_object.prototype.cnds.Compare,
-	cr.system_object.prototype.acts.CreateObject,
-	cr.plugins_.Sprite.prototype.exps.ImagePointX,
-	cr.plugins_.Sprite.prototype.exps.ImagePointY,
-	cr.plugins_.Sprite.prototype.exps.AnimationFrame,
-	cr.system_object.prototype.acts.AddVar,
-	cr.plugins_.Mouse.prototype.cnds.OnWheel,
-	cr.system_object.prototype.acts.SubVar,
-	cr.system_object.prototype.cnds.CompareVar
+	cr.plugins_.Function.prototype.acts.CallFunction,
+	cr.system_object.prototype.acts.SetGroupActive,
+	cr.plugins_.Arr.prototype.acts.SetXYZ,
+	cr.system_object.prototype.cnds.ForEach,
+	cr.plugins_.Keyboard.prototype.cnds.IsKeyCodeDown,
+	cr.plugins_.Arr.prototype.exps.At,
+	cr.behaviors.Platform.prototype.acts.SimulateControl,
+	cr.plugins_.Function.prototype.cnds.OnFunction,
+	cr.plugins_.Sprite.prototype.cnds.PickByUID,
+	cr.plugins_.Function.prototype.exps.Param,
+	cr.plugins_.Sprite.prototype.acts.SetPos
 ];};
 
