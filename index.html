@@ -2,8 +2,9 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
     <title>Contrato de Namoro</title>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tangerine:wght@400;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
@@ -24,21 +25,20 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 0;
             overflow-x: hidden;
+            color: #eee;
         }
 
         .contract-container {
             background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
             border: 2px solid #555;
             border-radius: 30px;
-            padding: 20px 30px 20px 30px;
+            padding: 20px 30px;
             max-width: 650px;
+            width: 90%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
             position: relative;
             z-index: 10;
-            color: #eee;
-	    margin: auto;
         }
 
         .heart-icon {
@@ -54,7 +54,6 @@
             font-size: 36px;
             margin-bottom: 8px;
             font-weight: 400;
-            font-family: 'Playfair Display', serif;
             letter-spacing: 2px;
         }
 
@@ -64,7 +63,6 @@
             font-style: italic;
             margin-bottom: 20px;
             font-size: 15px;
-            font-family: 'Playfair Display', serif;
         }
 
         .clause {
@@ -109,7 +107,6 @@
 
         .signature-input {
             width: 100%;
-            max-width: none;
             padding: 10px;
             font-family: 'Great Vibes', cursive;
             font-size: 35px;
@@ -122,15 +119,13 @@
             display: block;
             outline: none;
             transition: background 0.3s ease, border-color 0.3s ease;
-	        border-radius: 16px;
+            border-radius: 16px;
             font-weight: 400;
         }
 
         .signature-input:focus {
-	    max-width: none;
             background: rgba(255, 255, 255, 0.02);
-	    border-bottom: 2px solid #444;
-            border-bottom-color: #ff6b9d;
+            border-bottom: 2px solid #ff6b9d;
         }
 
         .date {
@@ -139,6 +134,7 @@
             margin-top: 12px;
             font-size: 14px;
         }
+
         .heart-bottom {
             text-align: center;
             margin-top: 16px;
@@ -159,29 +155,102 @@
             cursor: pointer;
             transition: all 0.3s;
         }
+
         .print-button:hover {
             background: #ff5189;
             transform: scale(1.05);
         }
+
         .print-button.show {
             display: block;
         }
 
-        @media (max-width: 800px) {
+        /* ----------- Design fluido para celular (Poco C75 e similares) ----------- */
+        @media (max-width: 600px) {
+            html {
+                font-size: 14px;
+            }
+
+            body {
+                align-items: flex-start;
+                padding: 4vw 0;
+            }
+
             .contract-container {
-                max-width: 100vw;
-                padding: 18px 4px 18px 4px;
-                border-radius: 20px;
+                width: 94vw;
+                padding: 4vw 5vw;
+                border-radius: 5vw;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
             }
+
             h1 {
-                font-size: 23px;
+                font-size: 6vw;
             }
+
+            .subtitle {
+                font-size: 3.5vw;
+                margin-bottom: 4vw;
+            }
+
+            .clause {
+                font-size: 3.8vw;
+                line-height: 1.6;
+                text-align: left;
+                margin-bottom: 3vw;
+            }
+
             .signature-name,
             .signature-input {
-                font-size: 30px;
+                font-size: 6vw;
             }
-            .clause {
-                font-size: 13px;
+
+            .signature-input {
+                padding: 2vw;
+                border-radius: 3vw;
+            }
+
+            .print-button {
+                font-size: 3.6vw;
+                padding: 2.4vw 5vw;
+                border-radius: 3vw;
+            }
+
+            .heart-icon {
+                font-size: 8vw;
+            }
+
+            .heart-bottom {
+                font-size: 6vw;
+            }
+        }
+
+        /* ----------- Efeitos de vaga-lumes ----------- */
+        .firefly {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+            animation: float 15s infinite ease-in-out;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                opacity: 0;
+                transform: translateY(0) translateX(0);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(50px);
             }
         }
 
@@ -189,7 +258,6 @@
             @page { margin: 8mm; }
             body {
                 background: #18181c !important;
-                min-height: unset;
                 overflow: visible;
                 box-shadow: none !important;
                 print-color-adjust: exact;
@@ -198,13 +266,9 @@
             .contract-container {
                 background: linear-gradient(145deg, #2a2a2a, #1a1a1a) !important;
                 border: 2px solid #555 !important;
-                border-radius: 30px !important;
                 color: #eee !important;
                 box-shadow: none !important;
-                page-break-inside: avoid;
-                padding: 2mm 10mm 2mm 10mm !important;
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
+                padding: 2mm 10mm !important;
             }
             h1,
             .clause,
@@ -223,56 +287,19 @@
                 color: #ff6b9d !important;
                 opacity: 0.3 !important;
             }
-            .clause,
-            h1,
-            .subtitle {
-                font-size: 15px !important;
-            }
-            .signature-name,
-            .signature-input {
-                font-size: 35px !important;
-            }
             .print-button {
                 display: none !important;
             }
         }
-
-	.firefly {
-    position: fixed;
-    width: 4px;
-    height: 4px;
-    background: #ffd700;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
-    animation: float 15s infinite ease-in-out;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 2;
-}
-
-@keyframes float {
-    0%, 100% {
-        opacity: 0;
-        transform: translateY(0) translateX(0);
-    }
-    10% {
-        opacity: 1;
-    }
-    90% {
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(-100vh) translateX(50px);
-    }
-}
-
     </style>
 </head>
+
 <body>
     <div class="contract-container">
         <div class="heart-icon">♥</div>
         <h1>Contrato de Namoro</h1>
         <p class="subtitle">Por meio deste contrato particular de afeto e compromisso mútuo,</p>
+
         <div class="clause"><span class="clause-number">-</span> Declaro que te amo de todo o meu coração e prometo cuidar desse amor com dedicação e carinho todos os dias.</div>
         <div class="clause"><span class="clause-number">-</span> Prometo estar ao seu lado nos momentos bons e também nos difíceis, oferecendo sempre o máximo da minha atenção e do meu afeto.</div>
         <div class="clause"><span class="clause-number">-</span> Prometo respeitar seus sonhos, apoiar seus objetivos e celebrar cada uma de suas conquistas como se fossem minhas.</div>
@@ -280,6 +307,7 @@
         <div class="clause"><span class="clause-number">-</span> Prometo ser sincero, leal e construir ao seu lado uma história linda, repleta de amor, cumplicidade e ternura.</div>
         <div class="clause"><span class="clause-number">-</span> Prometo respeitar seus medos e traumas, ajudá-la a superá-los e acolhê-la com amor sempre que voltarem a te assombrar.</div>
         <div class="clause"><span class="clause-number">-</span> Declaro ainda que este compromisso é mútuo — tudo o que prometo a você, também espero de volta. Que este seja um pacto de amor verdadeiro, onde ambos cuidem um do outro com o mesmo carinho, respeito e dedicação.</div>
+
         <div class="signature-section">
             <p class="signed-by">Assinado com todo o meu amor,</p>
             <div class="signature-name">Ryan S. Santana</div>
@@ -290,6 +318,7 @@
             <button class="print-button" id="printBtn">🖨️ Imprimir Contrato</button>
         </div>
     </div>
+
     <script>
         // Criar vaga-lumes
         function createFireflies() {
