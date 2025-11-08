@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
@@ -15,8 +14,7 @@
             box-sizing: border-box;
         }
 
-        html,
-        body {
+        html, body {
             height: 100%;
         }
 
@@ -41,7 +39,6 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
             position: relative;
             z-index: 10;
-            margin: auto;
         }
 
         .heart-icon {
@@ -242,80 +239,55 @@
         }
 
         @keyframes float {
-
-            0%,
-            100% {
+            0%, 100% {
                 opacity: 0;
                 transform: translateY(0) translateX(0);
             }
-
             10% {
                 opacity: 1;
             }
-
             90% {
                 opacity: 1;
             }
-
             100% {
                 transform: translateY(-100vh) translateX(50px);
             }
         }
 
         @media print {
-            @page {
-                size: A4;
-                margin: 8mm;
-            }
-
-            html,
+            @page { margin: 8mm; }
             body {
-                height: auto !important;
                 background: #18181c !important;
-                overflow: visible !important;
+                overflow: visible;
                 box-shadow: none !important;
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
             }
-
             .contract-container {
                 background: linear-gradient(145deg, #2a2a2a, #1a1a1a) !important;
                 border: 2px solid #555 !important;
                 color: #eee !important;
                 box-shadow: none !important;
-                padding: 10mm 12mm !important;
-                margin: 0 auto !important;
-                page-break-inside: avoid !important;
-                page-break-before: auto !important;
-                page-break-after: auto !important;
-                width: 100% !important;
-                max-width: 650px !important;
-                border-radius: 20px !important;
+                padding: 2mm 10mm !important;
             }
-
             h1,
             .clause,
             .signature-name,
             .signature-input {
                 color: #fff !important;
             }
-
             .subtitle,
             .signed-by,
             .accept-text,
             .date {
                 color: #aaa !important;
             }
-
             .heart-icon,
             .heart-bottom {
                 color: #ff6b9d !important;
                 opacity: 0.3 !important;
             }
-
-            /* Esconde elementos desnecessários na impressão */
-            .print-button,
-            .firefly {
+            .print-button {
                 display: none !important;
             }
         }
@@ -328,21 +300,13 @@
         <h1>Contrato de Namoro</h1>
         <p class="subtitle">Por meio deste contrato particular de afeto e compromisso mútuo,</p>
 
-        <div class="clause"><span class="clause-number">-</span> Declaro que te amo de todo o meu coração e prometo
-            cuidar desse amor com dedicação e carinho todos os dias.</div>
-        <div class="clause"><span class="clause-number">-</span> Prometo estar ao seu lado nos momentos bons e também
-            nos difíceis, oferecendo sempre o máximo da minha atenção e do meu afeto.</div>
-        <div class="clause"><span class="clause-number">-</span> Prometo respeitar seus sonhos, apoiar seus objetivos e
-            celebrar cada uma de suas conquistas como se fossem minhas.</div>
-        <div class="clause"><span class="clause-number">-</span> Prometo compartilhar com você minhas vitórias, meus
-            fracassos e todas as experiências que a vida nos proporcionar.</div>
-        <div class="clause"><span class="clause-number">-</span> Prometo ser sincero, leal e construir ao seu lado uma
-            história linda, repleta de amor, cumplicidade e ternura.</div>
-        <div class="clause"><span class="clause-number">-</span> Prometo respeitar seus medos e traumas, ajudá-la a
-            superá-los e acolhê-la com amor sempre que voltarem a te assombrar.</div>
-        <div class="clause"><span class="clause-number">-</span> Declaro ainda que este compromisso é mútuo — tudo o que
-            prometo a você, também espero de volta. Que este seja um pacto de amor verdadeiro, onde ambos cuidem um do
-            outro com o mesmo carinho, respeito e dedicação.</div>
+        <div class="clause"><span class="clause-number">-</span> Declaro que te amo de todo o meu coração e prometo cuidar desse amor com dedicação e carinho todos os dias.</div>
+        <div class="clause"><span class="clause-number">-</span> Prometo estar ao seu lado nos momentos bons e também nos difíceis, oferecendo sempre o máximo da minha atenção e do meu afeto.</div>
+        <div class="clause"><span class="clause-number">-</span> Prometo respeitar seus sonhos, apoiar seus objetivos e celebrar cada uma de suas conquistas como se fossem minhas.</div>
+        <div class="clause"><span class="clause-number">-</span> Prometo compartilhar com você minhas vitórias, meus fracassos e todas as experiências que a vida nos proporcionar.</div>
+        <div class="clause"><span class="clause-number">-</span> Prometo ser sincero, leal e construir ao seu lado uma história linda, repleta de amor, cumplicidade e ternura.</div>
+        <div class="clause"><span class="clause-number">-</span> Prometo respeitar seus medos e traumas, ajudá-la a superá-los e acolhê-la com amor sempre que voltarem a te assombrar.</div>
+        <div class="clause"><span class="clause-number">-</span> Declaro ainda que este compromisso é mútuo — tudo o que prometo a você, também espero de volta. Que este seja um pacto de amor verdadeiro, onde ambos cuidem um do outro com o mesmo carinho, respeito e dedicação.</div>
 
         <div class="signature-section">
             <p class="signed-by">Assinado com todo o meu amor,</p>
@@ -374,7 +338,7 @@
         const signatureInput = document.getElementById('partnerSignature');
         const printBtn = document.getElementById('printBtn');
 
-        signatureInput.addEventListener('input', function () {
+        signatureInput.addEventListener('input', function() {
             if (this.value.trim().length > 0) {
                 printBtn.classList.add('show');
             } else {
@@ -383,10 +347,9 @@
         });
 
         // Função de imprimir
-        printBtn.addEventListener('click', function () {
+        printBtn.addEventListener('click', function() {
             window.print();
         });
     </script>
 </body>
-
 </html>
